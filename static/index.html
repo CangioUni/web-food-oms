@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Burger POS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <style>
+        /* Ensure full viewport height on mobile/tablet */
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Bottom action bar: compact on tablets */
+        @media (max-width: 1279px) {
+            .action-bar-btn {
+                aspect-ratio: auto !important;
+                padding-top: 0.75rem;
+                padding-bottom: 0.75rem;
+            }
+        }
+
+        /* On large screens keep aspect-square */
+        @media (min-width: 1280px) {
+            .action-bar-btn {
+                aspect-ratio: 1 / 1;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
+
+    <div class="bg-gray-900 text-white p-3 flex justify-between items-center">
+        <h1 class="font-bold">Burger Station v1.0</h1>
+        <div class="flex items-center space-x-2">
+            <a href="/static/orders.html"
+                class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1 rounded font-bold text-white no-underline text-center">📜
+                Ordini Recenti</a>
+            <a href="/static/editor.html"
+                class="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded font-bold text-white no-underline text-center">🍔
+                Editor Menu</a>
+            <button onclick="openSettings()" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">⚙️
+                Impostazioni</button>
+            <span>Operatore:</span>
+            <select id="user-selector" class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white">
+            </select>
+        </div>
+    </div>
+
+    <div class="flex flex-grow overflow-hidden">
+        <div class="w-1/3 bg-white border-r flex flex-col p-4">
+            <h2 class="text-xl font-bold border-b pb-2 mb-4 flex justify-between items-center">
+                <span>Ordine Attuale</span>
+                <input type="number" id="custom-order-id" placeholder="ID (Auto)"
+                    class="w-24 text-center border-b-2 border-gray-400 focus:outline-none focus:border-blue-500 font-mono text-lg bg-gray-50 rounded"
+                    title="Lascia vuoto per numero automatico">
+            </h2>
+            <div id="cart-items" class="flex-grow overflow-y-auto space-y-2"></div>
+            <div class="border-t pt-4">
+                <div class="flex justify-between text-xl text-gray-600 font-bold mb-1">
+                    <span>Subtotale:</span>
+                    <span id="cart-subtotal">€0.00</span>
+                </div>
+                <div class="flex justify-between text-xl text-red-500 font-bold mb-2">
+                    <span>Sconto:</span>
+                    <span id="cart-discount">-€0.00</span>
+                </div>
+                <div class="flex justify-between text-3xl font-bold border-t pt-2 mt-2">
+                    <span>Totale:</span>
+                    <span id="cart-total">€0.00</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-4">
+                    <button id="btn-pay-cash" onclick="selectPayment('Cash')"
+                        class="bg-green-600 text-white py-3 rounded font-bold border-4 border-yellow-400">CONTANTI</button>
+                    <button id="btn-pay-satispay" onclick="selectPayment('Satispay')"
+                        class="bg-blue-500 text-white py-3 rounded font-bold border-4 border-transparent">SATISPAY</button>
+                </div>
+                <button onclick="checkout()"
+                    class="w-full bg-red-600 hover:bg-red-500 text-white py-4 rounded font-black text-2xl mt-4">INVIA
+                    ORDINE</button>
+            </div>
+        </div>
+
+        <div class="w-2/3 flex">
+            <div id="category-sidebar" class="w-32 p-2 bg-gray-200 border-r flex flex-col items-center py-4 space-y-4">
+            </div>
+            <div class="flex-grow flex flex-col">
+                <div id="menu-grid"
+                    class="grid grid-cols-3 xl:grid-cols-5 gap-3 p-3 overflow-y-auto flex-grow content-start"></div>
+                <div class="bg-gray-800 p-3 grid grid-cols-6 gap-2 flex-shrink-0">
+                    <button onclick="setDiscount()"
+                        class="action-bar-btn bg-yellow-600 text-white rounded flex flex-col items-center justify-center font-bold text-lg shadow-lg border-2 border-yellow-500">Sconto
+                        %</button>
+                    <button onclick="toggleTakeaway()" id="btn-takeaway"
+                        class="action-bar-btn bg-gray-600 text-white rounded flex flex-col items-center justify-center font-bold text-lg shadow-lg border-2 border-gray-500">Asporto<br><span
+                            id="lbl-asporto" class="text-xl mt-1 text-gray-300">NO</span></button>
+                    <button onclick="openTableModal()"
+                        class="action-bar-btn bg-purple-600 text-white rounded flex flex-col items-center justify-center font-bold text-lg shadow-lg border-2 border-purple-500">Tavolo<br><span
+                            id="lbl-table" class="text-xl mt-1 text-purple-200">Nessuno</span></button>
+                    <button onclick="openOrderNotesModal()"
+                        class="action-bar-btn bg-blue-600 text-white rounded flex flex-col items-center justify-center font-bold text-lg shadow-lg border-2 border-blue-500">Note<br>Ordine</button>
+                    <button onclick="openVarieModal()"
+                        class="action-bar-btn bg-pink-600 text-white rounded flex flex-col items-center justify-center font-bold text-lg shadow-lg border-2 border-pink-500">VARIE</button>
+                    <button onclick="reprint()"
+                        class="action-bar-btn bg-gray-500 text-white rounded flex flex-col items-center justify-center font-bold text-lg shadow-lg border-2 border-gray-400">Ristampa</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="success-overlay"
+        class="hidden fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center text-white z-50 overflow-y-auto py-10">
+        <h2 class="text-6xl font-bold mb-2 text-green-500">STAMPATO!</h2>
+        <p class="text-xl mb-4 text-gray-300">Numero Ordine: <span id="final-order-id"
+                class="font-mono text-3xl font-bold text-yellow-400">000</span></p>
+
+        <div id="success-order-details"
+            class="bg-gray-800 p-6 rounded text-left w-1/3 min-w-[400px] mb-8 overflow-y-auto max-h-96 text-xl border border-gray-700">
+            <!-- Dynamic order details -->
+        </div>
+
+        <div class="flex space-x-6 w-1/3 min-w-[400px]">
+            <button onclick="resetOrder()"
+                class="bg-white hover:bg-gray-200 text-black py-4 rounded-full text-xl font-bold flex-1 shadow">NUOVO
+                ORDINE</button>
+            <button onclick="printBill()"
+                class="bg-yellow-600 hover:bg-yellow-500 text-white py-4 rounded-full text-xl font-bold flex-1 shadow">Stampa
+                Scontrino</button>
+        </div>
+    </div>
+
+    <!-- Table Selection Modal -->
+    <div id="table-modal"
+        class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
+        <div class="bg-gray-800 p-8 rounded-lg w-1/3 min-w-[400px] border border-gray-600">
+            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Seleziona Tavolo</h2>
+            <input type="text" id="table-input"
+                class="w-full bg-gray-700 text-white text-4xl font-mono text-center p-4 rounded mb-6 border border-gray-600"
+                readonly>
+            <div class="grid grid-cols-3 gap-3 mb-6">
+                <button onclick="tablePress('1')"
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">1</button>
+                <button onclick="tablePress('2')"
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">2</button>
+                <button onclick="tablePress('3')"
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">3</button>
+                <button onclick="tablePress('4')"
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">4</button>
+                <button onclick="tablePress('5')"
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">5</button>
+                <button onclick="tablePress('6')"
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">6</button>
+                <button onclick="tablePress('7')"
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">7</button>
+                <button onclick="tablePress('8')"
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">8</button>
+                <button onclick="tablePress('9')"
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">9</button>
+                <button onclick="tablePress('A')"
+                    class="bg-purple-600 p-6 rounded hover:bg-purple-500 font-bold text-4xl shadow text-purple-100">A</button>
+                <button onclick="tablePress('0')"
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">0</button>
+                <button onclick="tablePress('B')"
+                    class="bg-purple-600 p-6 rounded hover:bg-purple-500 font-bold text-4xl shadow text-purple-100">B</button>
+            </div>
+            <div class="flex justify-between space-x-4">
+                <button onclick="tableClear()"
+                    class="bg-red-600 px-4 py-4 rounded text-xl font-bold flex-1 shadow">Cancella</button>
+                <button onclick="closeTableModal()"
+                    class="bg-gray-600 px-4 py-4 rounded text-xl font-bold flex-1 shadow">Annulla</button>
+                <button onclick="saveTableModal()"
+                    class="bg-green-600 px-4 py-4 rounded text-xl font-bold flex-1 shadow">Applica</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Notes Modal -->
+    <div id="order-notes-modal"
+        class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
+        <div class="bg-gray-800 p-8 rounded-lg w-1/2 border border-gray-600">
+            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Note all'Ordine</h2>
+            <textarea id="order-notes-input"
+                class="w-full bg-gray-700 text-white p-4 rounded border border-gray-600 h-32 text-2xl"
+                placeholder="Ad esempio: Tutto ben cotto, cliente allergico..."></textarea>
+            <div class="flex justify-end space-x-4 mt-6">
+                <button onclick="closeOrderNotesModal()"
+                    class="bg-gray-600 px-8 py-3 rounded text-2xl font-bold">Annulla</button>
+                <button onclick="saveOrderNotesModal()" class="bg-green-600 px-8 py-3 rounded text-2xl font-bold">Salva
+                    Note</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Personalization Modal -->
+    <div id="item-modal"
+        class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
+        <div class="bg-gray-800 p-8 rounded-lg w-1/2">
+            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Opzioni Articolo</h2>
+            <div class="mb-4">
+                <label class="block mb-2 font-bold text-xl">Note</label>
+                <textarea id="item-notes"
+                    class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600 h-24 text-xl"></textarea>
+            </div>
+            <div id="item-ingredients-container" class="mb-6">
+                <label class="block mb-2 font-bold text-xl">Ingredienti</label>
+                <div class="grid grid-cols-4 gap-2" id="item-ingredients-grid">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-4">
+                <button onclick="closeItemModal()"
+                    class="bg-gray-600 px-6 py-2 rounded text-xl font-bold">Annulla</button>
+                <button onclick="saveItemModal()"
+                    class="bg-green-600 px-6 py-2 rounded text-xl font-bold">Aggiorna</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Discount Modal -->
+    <div id="discount-modal"
+        class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
+        <div class="bg-gray-800 p-8 rounded-lg w-1/3 min-w-[400px]">
+            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Imposta Sconto</h2>
+
+            <div class="flex justify-between items-end mb-4">
+                <div class="flex-grow flex flex-col">
+                    <label class="block text-gray-400 font-bold mb-1">Importo</label>
+                    <input type="text" id="discount-input"
+                        class="w-full bg-gray-700 text-white text-3xl p-2 rounded border border-gray-600 text-right"
+                        readonly value="0">
+                </div>
+                <div class="flex ml-2 pb-1 text-white">
+                    <button onclick="setDiscountType('%')" id="btn-disc-pct"
+                        class="bg-blue-600 px-4 py-2 text-2xl font-bold rounded-l border border-blue-600">%</button>
+                    <button onclick="setDiscountType('€')" id="btn-disc-eur"
+                        class="bg-gray-700 px-4 py-2 text-2xl font-bold rounded-r border border-gray-600">€</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mb-4 text-3xl font-bold">
+                <button onclick="numpadPress(1)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">1</button>
+                <button onclick="numpadPress(2)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">2</button>
+                <button onclick="numpadPress(3)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">3</button>
+                <button onclick="numpadPress(4)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">4</button>
+                <button onclick="numpadPress(5)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">5</button>
+                <button onclick="numpadPress(6)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">6</button>
+                <button onclick="numpadPress(7)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">7</button>
+                <button onclick="numpadPress(8)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">8</button>
+                <button onclick="numpadPress(9)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">9</button>
+                <button onclick="numpadPress('C')" class="bg-red-600 p-4 rounded hover:bg-red-500">C</button>
+                <button onclick="numpadPress(0)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">0</button>
+                <button onclick="numpadPress('.')" class="bg-gray-600 p-4 rounded hover:bg-gray-500">.</button>
+            </div>
+
+            <div class="flex justify-between text-xl text-gray-400 mb-1">
+                <span>Subtotale:</span>
+                <span id="disc-subtotal">€0.00</span>
+            </div>
+            <div class="flex justify-between text-3xl font-bold mb-6 text-green-400">
+                <span>Nuovo Totale:</span>
+                <span id="disc-total">€0.00</span>
+            </div>
+
+            <div class="flex justify-end space-x-4 border-t border-gray-600 pt-4">
+                <button onclick="closeDiscountModal()"
+                    class="bg-gray-600 px-6 py-3 rounded text-2xl font-bold">Annulla</button>
+                <button onclick="applyDiscount()"
+                    class="bg-green-600 px-6 py-3 rounded text-2xl font-bold">Applica</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-overlay"
+        class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
+        <div class="bg-gray-800 p-8 rounded-lg w-1/2">
+            <h2 class="text-3xl font-bold mb-6 border-b border-gray-600 pb-2">Impostazioni</h2>
+            <div class="mb-4">
+                <label class="block mb-2 font-bold">IP Stampante Scontrini</label>
+                <input type="text" id="bill-printer-ip"
+                    class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600" />
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2 font-bold">IP Stampante Cucina</label>
+                <input type="text" id="kitchen-printer-ip"
+                    class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600" />
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2 font-bold">Prossimo N. Ordine / Scontrino</label>
+                <input type="number" id="settings-next-bill"
+                    class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600 font-mono text-xl" />
+                <p class="text-sm text-gray-400 mt-1">Imposta il numero da cui ripartire. Non cancellerà lo storico a database.</p>
+            </div>
+            <div class="mb-8">
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="checkbox" id="auto-print-cb"
+                        class="w-6 h-6 rounded text-green-500 focus:ring-green-500 bg-gray-700 border-gray-600">
+                    <span class="font-bold text-xl">Stampa Scontrino Automatica</span>
+                </label>
+            </div>
+            <div class="flex justify-end space-x-4">
+                <button onclick="closeSettings()"
+                    class="bg-gray-600 px-6 py-2 rounded text-xl font-bold">Annulla</button>
+                <button onclick="saveSettings()" class="bg-green-600 px-6 py-2 rounded text-xl font-bold">Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Combo Modal -->
+    <div id="combo-modal"
+        class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
+        <div class="bg-gray-800 p-8 rounded-lg w-1/2">
+            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Configura Menù</h2>
+            <div id="combo-slots-container" class="mb-6 space-y-4">
+                <!-- dynamic slots here -->
+            </div>
+            <div class="flex justify-end space-x-4">
+                <button onclick="closeComboModal()"
+                    class="bg-gray-600 px-6 py-2 rounded text-xl font-bold">Annulla</button>
+                <button onclick="confirmComboModal()" class="bg-green-600 px-6 py-2 rounded text-xl font-bold">Aggiungi
+                    al Carrello</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Varie Modal -->
+    <div id="varie-modal"
+        class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
+        <div class="bg-gray-800 p-8 rounded-lg w-1/3 min-w-[400px]">
+            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Aggiungi VARIE</h2>
+
+            <div class="mb-4">
+                <label class="block text-gray-400 font-bold mb-1">Importo (€)</label>
+                <input type="text" id="varie-input"
+                    class="w-full bg-gray-700 text-white text-3xl p-2 rounded border border-gray-600 text-right"
+                    readonly value="0">
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mb-6 text-3xl font-bold">
+                <button onclick="numpadPressVarie(1)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">1</button>
+                <button onclick="numpadPressVarie(2)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">2</button>
+                <button onclick="numpadPressVarie(3)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">3</button>
+                <button onclick="numpadPressVarie(4)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">4</button>
+                <button onclick="numpadPressVarie(5)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">5</button>
+                <button onclick="numpadPressVarie(6)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">6</button>
+                <button onclick="numpadPressVarie(7)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">7</button>
+                <button onclick="numpadPressVarie(8)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">8</button>
+                <button onclick="numpadPressVarie(9)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">9</button>
+                <button onclick="numpadPressVarie('C')" class="bg-red-600 p-4 rounded hover:bg-red-500">C</button>
+                <button onclick="numpadPressVarie(0)" class="bg-gray-600 p-4 rounded hover:bg-gray-500">0</button>
+                <button onclick="numpadPressVarie('.')" class="bg-gray-600 p-4 rounded hover:bg-gray-500">.</button>
+            </div>
+
+            <div class="flex justify-end space-x-4 border-t border-gray-600 pt-4">
+                <button onclick="closeVarieModal()"
+                    class="bg-gray-600 px-6 py-3 rounded text-2xl font-bold">Annulla</button>
+                <button onclick="applyVarie()"
+                    class="bg-green-600 px-6 py-3 rounded text-2xl font-bold">Aggiungi</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let menuData = [];
+        let categoriesData = [];
+        let activeCategory = 'panini';
+        let cart = [];
+        let state = { user_id: 1, table: "Nessuno", takeaway: false, discount: 0, discount_type: '%', payment_method: 'Cash', orderNotes: '' };
+
+        async function init() {
+            const [uResp, mResp, cResp] = await Promise.all([fetch('/users'), fetch('/menu'), fetch('/categories')]);
+            const users = await uResp.json();
+            menuData = await mResp.json();
+            categoriesData = await cResp.json();
+
+            const sel = document.getElementById('user-selector');
+            sel.innerHTML = '';
+            users.forEach(u => sel.innerHTML += `<option value="${u.id}">${u.name}</option>`);
+            
+            sel.addEventListener('change', async (e) => {
+                state.user_id = e.target.value;
+                await loadRemoteState();
+            });
+
+            if (users.length > 0) {
+                state.user_id = users[0].id;
+                sel.value = state.user_id;
+            }
+
+            const catSidebar = document.getElementById('category-sidebar');
+            catSidebar.innerHTML = '';
+            categoriesData.forEach(c => {
+                catSidebar.innerHTML += `<button onclick="setCategory('${c.name}')" class="w-20 h-20 bg-white rounded-lg shadow font-bold hover:bg-yellow-100 flex items-center justify-center text-center capitalize">${c.name}</button>`;
+            });
+
+            await loadRemoteState();
+
+            if (categoriesData.length > 0) setCategory(categoriesData[0].name);
+            initSortable();
+        }
+
+        async function loadRemoteState() {
+            try {
+                const resp = await fetch('/users/' + state.user_id + '/cart');
+                if(resp.ok) {
+                    const data = await resp.json();
+                    cart = JSON.parse(data.active_cart);
+                    const savedState = JSON.parse(data.active_state);
+                    
+                    state.table = savedState.table || "Nessuno";
+                    state.takeaway = savedState.takeaway || false;
+                    state.discount = savedState.discount || 0;
+                    state.discount_type = savedState.discount_type || '%';
+                    state.payment_method = savedState.payment_method || 'Cash';
+                    state.orderNotes = savedState.orderNotes || '';
+
+                    document.getElementById('lbl-table').innerText = state.table;
+                    const btnTake = document.getElementById('btn-takeaway');
+                    const lblAsporto = document.getElementById('lbl-asporto');
+                    if (state.takeaway) {
+                        btnTake.classList.add('bg-orange-600', 'border-orange-500');
+                        btnTake.classList.remove('bg-gray-600', 'border-gray-500');
+                        lblAsporto.innerText = "SI";
+                    } else {
+                        btnTake.classList.add('bg-gray-600', 'border-gray-500');
+                        btnTake.classList.remove('bg-orange-600', 'border-orange-500');
+                        lblAsporto.innerText = "NO";
+                    }
+
+                    if (state.payment_method === 'Satispay') {
+                        document.getElementById('btn-pay-satispay').classList.replace('border-transparent', 'border-yellow-400');
+                        document.getElementById('btn-pay-cash').classList.replace('border-yellow-400', 'border-transparent');
+                    } else {
+                        document.getElementById('btn-pay-cash').classList.replace('border-transparent', 'border-yellow-400');
+                        document.getElementById('btn-pay-satispay').classList.replace('border-yellow-400', 'border-transparent');
+                    }
+                    
+                    render(false);
+                }
+            } catch(e) {
+                console.error("Failed to load user state", e);
+            }
+        }
+
+        let saveTimeout;
+        function saveRemoteState() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(async () => {
+                const payload = {
+                    active_cart: JSON.stringify(cart),
+                    active_state: JSON.stringify(state)
+                };
+                await fetch('/users/' + state.user_id + '/cart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            }, 300);
+        }
+
+        function initSortable() {
+            const el = document.getElementById('cart-items');
+            Sortable.create(el, {
+                animation: 150,
+                handle: '.drag-handle',
+                onEnd: function (evt) {
+                    const movedItem = cart.splice(evt.oldIndex, 1)[0];
+                    cart.splice(evt.newIndex, 0, movedItem);
+                    saveRemoteState();
+                }
+            });
+        }
+
+        function selectPayment(method) {
+            state.payment_method = method;
+            if (method === 'Cash') {
+                document.getElementById('btn-pay-cash').classList.replace('border-transparent', 'border-yellow-400');
+                document.getElementById('btn-pay-satispay').classList.replace('border-yellow-400', 'border-transparent');
+            } else {
+                document.getElementById('btn-pay-satispay').classList.replace('border-transparent', 'border-yellow-400');
+                document.getElementById('btn-pay-cash').classList.replace('border-yellow-400', 'border-transparent');
+            }
+            render();
+        }
+
+        function setCategory(cat) {
+            activeCategory = cat;
+            const grid = document.getElementById('menu-grid');
+            grid.innerHTML = '';
+            const filteredMenu = menuData.filter(item => item.category === cat);
+            filteredMenu.forEach(item => {
+                grid.innerHTML += `
+                    <button onclick="addToCart(${JSON.stringify(item).replace(/"/g, '&quot;')})" class="bg-white p-2 rounded shadow hover:shadow-lg flex flex-col items-center justify-center aspect-square">
+                        <img src="${item.image_url}" class="w-full h-1/2 object-cover rounded mb-2">
+                        <span class="font-black text-lg block text-black leading-tight w-full truncate">${item.description}</span>
+                        <span class="text-green-600 font-bold text-xl font-mono mt-1">€${item.price.toFixed(2)}</span>
+                    </button>`;
+            });
+        }
+
+        let activeComboItem = null;
+
+        function toggleTakeaway() {
+            state.takeaway = !state.takeaway;
+            const btn = document.getElementById('btn-takeaway');
+            const lblAsporto = document.getElementById('lbl-asporto');
+            if (state.takeaway) {
+                btn.classList.add('bg-orange-600', 'border-orange-500');
+                btn.classList.remove('bg-gray-600', 'border-gray-500');
+                lblAsporto.innerText = "SI";
+            } else {
+                btn.classList.add('bg-gray-600', 'border-gray-500');
+                btn.classList.remove('bg-orange-600', 'border-orange-500');
+                lblAsporto.innerText = "NO";
+            }
+            render();
+        }
+
+        // --- Table Actions ---
+        function openTableModal() {
+            document.getElementById('table-input').value = state.table === "Nessuno" ? "" : state.table;
+            document.getElementById('table-modal').classList.remove('hidden');
+        }
+
+        function tablePress(val) {
+            document.getElementById('table-input').value += val;
+        }
+
+        function tableClear() {
+            document.getElementById('table-input').value = '';
+        }
+
+        function closeTableModal() {
+            document.getElementById('table-modal').classList.add('hidden');
+        }
+
+        function saveTableModal() {
+            const val = document.getElementById('table-input').value.trim();
+            state.table = val === '' ? "Nessuno" : val;
+            document.getElementById('lbl-table').innerText = state.table;
+            closeTableModal();
+            render();
+        }
+
+        // --- Order Notes Actions ---
+        function openOrderNotesModal() {
+            document.getElementById('order-notes-input').value = state.orderNotes || '';
+            document.getElementById('order-notes-modal').classList.remove('hidden');
+        }
+
+        function closeOrderNotesModal() {
+            document.getElementById('order-notes-modal').classList.add('hidden');
+        }
+
+        function saveOrderNotesModal() {
+            state.orderNotes = document.getElementById('order-notes-input').value;
+            closeOrderNotesModal();
+            render();
+        }
+
+        function addToCart(item) {
+            if (item.is_combo) {
+                activeComboItem = item;
+                openComboModal(item);
+                return;
+            }
+            cart.push({ ...item, cart_id: Date.now().toString() + Math.random().toString(), notes: '', ingredients: [] });
+            render();
+        }
+
+        function openComboModal(item) {
+            const container = document.getElementById('combo-slots-container');
+            container.innerHTML = '';
+            let slots = [];
+            try { slots = JSON.parse(item.combo_items); } catch (e) { }
+
+            slots.forEach((slot, idx) => {
+                if (slot.length === 0) return;
+                let html = `<div class="bg-gray-700 p-4 rounded"><h3 class="font-bold text-xl mb-2 text-yellow-400">Selezione ${idx + 1}</h3><div class="flex flex-wrap gap-2">`;
+
+                if (slot.length === 1) {
+                    html += `<div class="bg-blue-600 px-4 py-2 rounded font-bold border-2 border-blue-400">
+                                <input type="radio" name="combo-slot-${idx}" value="${slot[0]}" checked class="hidden">
+                                ${slot[0]}
+                             </div>`;
+                } else {
+                    slot.forEach((opt, optIdx) => {
+                        const checked = optIdx === 0 ? 'checked' : '';
+                        html += `
+                        <label class="cursor-pointer bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded font-bold border-2 border-transparent relative">
+                            <input type="radio" name="combo-slot-${idx}" value="${opt}" ${checked} class="peer absolute opacity-0 w-full h-full cursor-pointer">
+                            <span class="peer-checked:text-blue-300 peer-checked:bg-blue-600 peer-checked:border-blue-400 border-2 border-transparent px-4 py-2 rounded block transition-all">${opt}</span>
+                        </label>`;
+                    });
+                }
+                html += `</div></div>`;
+                container.innerHTML += html;
+            });
+
+            document.getElementById('combo-modal').classList.remove('hidden');
+        }
+
+        function closeComboModal() {
+            document.getElementById('combo-modal').classList.add('hidden');
+            activeComboItem = null;
+        }
+
+        function confirmComboModal() {
+            if (!activeComboItem) return;
+            let slots = [];
+            try { slots = JSON.parse(activeComboItem.combo_items); } catch (e) { }
+
+            let selections = [];
+            slots.forEach((slot, idx) => {
+                if (slot.length === 0) return;
+                const radios = document.getElementsByName(`combo-slot-${idx}`);
+                for (let r of radios) {
+                    if (r.checked) selections.push(r.value);
+                }
+            });
+
+            cart.push({
+                ...activeComboItem,
+                cart_id: Date.now().toString() + Math.random().toString(),
+                notes: '',
+                ingredients: [],
+                combo_choices: selections
+            });
+
+            closeComboModal();
+            render();
+        }
+
+        function render(save = true) {
+            const container = document.getElementById('cart-items');
+            container.innerHTML = '';
+            let subtotal = 0;
+            cart.forEach(item => {
+                const itemPrice = item.current_price !== undefined ? item.current_price : item.price;
+                subtotal += itemPrice;
+
+                let ingLabels = [];
+                if (item.ingredients && item.ingredients.length > 0) {
+                    item.ingredients.forEach(ing => {
+                        if (ing.type === 'base') {
+                            if (ing.qty === 0) ingLabels.push(`Senza ${ing.name}`);
+                            else if (ing.qty === 2) ingLabels.push(`Doppio ${ing.name}`);
+                            else if (ing.qty === 3) ingLabels.push(`Triplo ${ing.name}`);
+                            else if (ing.qty > 3) ingLabels.push(`${ing.qty}x ${ing.name}`);
+                        } else if (ing.type === 'addition') {
+                            if (ing.qty === 1) ingLabels.push(`Con ${ing.name}`);
+                            else if (ing.qty === 2) ingLabels.push(`Doppio ${ing.name}`);
+                            else if (ing.qty === 3) ingLabels.push(`Triplo ${ing.name}`);
+                            else if (ing.qty > 3) ingLabels.push(`${ing.qty}x ${ing.name}`);
+                        }
+                    });
+                }
+                const ingredText = ingLabels.length > 0 ? `<div class="text-m text-blue-600">${ingLabels.join(', ')}</div>` : '';
+                const notesText = item.notes ? `<div class="text-m text-gray-500 italic">Note: ${item.notes}</div>` : '';
+
+                let comboHtml = '';
+                if (item.combo_choices && item.combo_choices.length > 0) {
+                    comboHtml = item.combo_choices.map(c => `<div class="text-m text-purple-700 pl-2">&bull; ${c}</div>`).join('');
+                }
+
+                container.innerHTML += `
+                    <div class="flex justify-between items-center bg-gray-50 p-2 rounded border hover:bg-gray-200">
+                        <div class="cursor-move drag-handle p-2 text-gray-400 hover:text-gray-600 text-xl font-bold flex flex-col justify-center items-center h-full mr-2">
+                            ☰
+                        </div>
+                        <div class="text-xl flex-grow cursor-pointer" onclick="openItemModal('${item.cart_id}')">
+                            <div class="font-bold text-black">${item.description}${item.combo_choices && item.combo_choices.length > 0 ? ':' : ''}</div>
+                            ${comboHtml}
+                            ${ingredText}
+                            ${notesText}
+                            <div class="text-xl font-mono text-black">€${itemPrice.toFixed(2)}</div>
+                        </div>
+                        <div class="flex items-center space-x-3 ml-2">
+                            <button onclick="removeFromCart('${item.cart_id}', event)" class="w-8 h-8 bg-red-100 rounded text-red-700 font-bold">X</button>
+                        </div>
+                    </div>`;
+            });
+
+            let discountAmount = 0;
+            if (state.discount_type === '%') {
+                discountAmount = subtotal * ((state.discount || 0) / 100);
+            } else {
+                discountAmount = state.discount || 0;
+            }
+            if (discountAmount > subtotal) discountAmount = subtotal;
+            const total = subtotal - discountAmount;
+
+            document.getElementById('cart-subtotal').innerText = `€${subtotal.toFixed(2)}`;
+            document.getElementById('cart-discount').innerText = `-€${discountAmount.toFixed(2)}`;
+            document.getElementById('cart-total').innerText = `€${total.toFixed(2)}`;
+
+            if (save) saveRemoteState();
+
+            return total;
+        }
+
+        function removeFromCart(cart_id, event) {
+            event.stopPropagation();
+            cart = cart.filter(i => i.cart_id !== cart_id);
+            render();
+        }
+
+        async function checkout() {
+            if (cart.length === 0) return alert("Il carrello è vuoto");
+
+            const method = state.payment_method || 'Cash';
+
+            const mappedCart = cart.map(item => {
+                let ingLabels = [];
+                if (item.ingredients && item.ingredients.length > 0) {
+                    item.ingredients.forEach(ing => {
+                        if (ing.type === 'base') {
+                            if (ing.qty === 0) ingLabels.push(`Senza ${ing.name}`);
+                            else if (ing.qty === 2) ingLabels.push(`Doppio ${ing.name}`);
+                            else if (ing.qty === 3) ingLabels.push(`Triplo ${ing.name}`);
+                            else if (ing.qty > 3) ingLabels.push(`${ing.qty}x ${ing.name}`);
+                        } else if (ing.type === 'addition') {
+                            if (ing.qty === 1) ingLabels.push(`Con ${ing.name}`);
+                            else if (ing.qty === 2) ingLabels.push(`Doppio ${ing.name}`);
+                            else if (ing.qty === 3) ingLabels.push(`Triplo ${ing.name}`);
+                            else if (ing.qty > 3) ingLabels.push(`${ing.qty}x ${ing.name}`);
+                        }
+                    });
+                }
+                return {
+                    ...item,
+                    price: item.current_price !== undefined ? item.current_price : item.price,
+                    ingredients: ingLabels.join(', '),
+                    combo_choices: item.combo_choices ? item.combo_choices.join(',') : ''
+                };
+            });
+
+            const customId = document.getElementById('custom-order-id').value;
+
+            const payload = {
+                items: mappedCart,
+                total: render(),
+                discount: state.discount || 0,
+                payment_method: method,
+                takeaway: state.takeaway,
+                table_number: state.table,
+                user_id: state.user_id,
+                notes: state.orderNotes || ''
+            };
+
+            if (customId) {
+                payload.order_id = customId;
+            }
+
+            const resp = await fetch('/order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await resp.json();
+            if (result.status === 'success') {
+                document.getElementById('final-order-id').innerText = result.order_id;
+
+                let summaryHtml = '<ul class="space-y-4">';
+                cart.forEach(item => {
+                    let subHtml = '';
+                    if (item.combo_choices && item.combo_choices.length > 0) {
+                        subHtml = item.combo_choices.map(c => `<div class="text-sm text-gray-400 ml-4">&bull; ${c}</div>`).join('');
+                    }
+                    const itemPrice = item.current_price !== undefined ? item.current_price : item.price;
+                    summaryHtml += `<li><div class="font-bold flex justify-between"><span>1x ${item.description}</span><span class="text-gray-300">€${itemPrice.toFixed(2)}</span></div>${subHtml}</li>`;
+                });
+
+                let subVal = cart.reduce((acc, curr) => acc + (curr.current_price !== undefined ? curr.current_price : curr.price), 0);
+                let discVal = state.discount_type === '%' ? subVal * ((state.discount || 0) / 100) : (state.discount || 0);
+                if (discVal > subVal) discVal = subVal;
+                let totVal = subVal - discVal;
+
+                summaryHtml += `</ul>
+                <div class="border-t border-gray-600 mt-4 pt-4 flex flex-col items-end">
+                    ${discVal > 0 ? `<div class="text-lg text-red-400">Sconto: -€${discVal.toFixed(2)}</div>` : ''}
+                    <div class="text-3xl font-black text-green-400 mt-1">TOTALE: €${totVal.toFixed(2)}</div>
+                    <div class="text-sm text-gray-400 mt-1 uppercase tracking-wider">Pagato via ${method}</div>
+                </div>`;
+
+                document.getElementById('success-order-details').innerHTML = summaryHtml;
+                document.getElementById('success-overlay').classList.remove('hidden');
+
+                if (result.auto_print) {
+                    printBill();
+                }
+            }
+        }
+
+        function printBill() {
+            alert("Richiesta di stampa scontrino inviata con successo alla stampante configurata!");
+        }
+
+        function resetOrder() {
+            cart = [];
+            state.table = "Nessuno";
+            state.takeaway = false;
+            state.discount = 0;
+            state.discount_type = '%';
+            state.payment_method = 'Cash';
+            state.orderNotes = '';
+            document.getElementById('custom-order-id').value = '';
+            document.getElementById('lbl-table').innerText = "Nessuno";
+            const btnTake = document.getElementById('btn-takeaway');
+            const lblTake = document.getElementById('lbl-asporto');
+            btnTake.classList.replace('bg-orange-600', 'bg-gray-600');
+            btnTake.classList.replace('border-orange-500', 'border-gray-500');
+            lblTake.innerText = "NO";
+            document.getElementById('success-overlay').classList.add('hidden');
+            render();
+        }
+
+        async function openSettings() {
+            const resp = await fetch('/settings');
+            const data = await resp.json();
+            document.getElementById('bill-printer-ip').value = data.bill_printer_ip || '';
+            document.getElementById('kitchen-printer-ip').value = data.kitchen_printer_ip || '';
+            document.getElementById('auto-print-cb').checked = data.auto_print;
+            document.getElementById('settings-next-bill').value = data.next_order_number || 1;
+            document.getElementById('settings-overlay').classList.remove('hidden');
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-overlay').classList.add('hidden');
+        }
+
+        async function saveSettings() {
+            const payload = {
+                bill_printer_ip: document.getElementById('bill-printer-ip').value,
+                kitchen_printer_ip: document.getElementById('kitchen-printer-ip').value,
+                auto_print: document.getElementById('auto-print-cb').checked,
+                next_order_number: parseInt(document.getElementById('settings-next-bill').value) || 1
+            };
+            const resp = await fetch('/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (resp.ok) {
+                closeSettings();
+            } else {
+                alert("Error saving settings");
+            }
+        }
+
+        function toggleTakeaway() {
+            state.takeaway = !state.takeaway;
+            const btn = document.getElementById('btn-takeaway');
+            if (state.takeaway) {
+                btn.classList.add('bg-orange-600');
+                btn.classList.remove('bg-gray-600');
+                btn.innerText = "Asporto: SI";
+            } else {
+                btn.classList.add('bg-gray-600');
+                btn.classList.remove('bg-orange-600');
+                btn.innerText = "Asporto: NO";
+            }
+        }
+
+        let activeCartId = null;
+        let tempIngredients = [];
+
+        function openItemModal(cart_id) {
+            const item = cart.find(i => i.cart_id === cart_id);
+            if (!item) return;
+            activeCartId = cart_id;
+            document.getElementById('item-notes').value = item.notes || '';
+            
+            if (!item.ingredients || item.ingredients.length === 0) {
+                tempIngredients = [];
+                const parseString = (str, type, defaultQty) => {
+                    if (!str) return [];
+                    return str.split(',').map(s => {
+                        const parts = s.trim().split(':');
+                        return { 
+                            name: parts[0].trim(), 
+                            price: parts.length > 1 ? parseFloat(parts[1]) : 0,
+                            type: type,
+                            qty: defaultQty
+                        };
+                    }).filter(i => i.name);
+                };
+                const baseComps = parseString(item.components, 'base', 1);
+                const additions = parseString(item.additions, 'addition', 0);
+                tempIngredients = [...baseComps, ...additions];
+            } else {
+                tempIngredients = JSON.parse(JSON.stringify(item.ingredients));
+            }
+
+            if (tempIngredients.length > 0) {
+                document.getElementById('item-ingredients-container').classList.remove('hidden');
+                renderIngredientsGrid();
+            } else {
+                document.getElementById('item-ingredients-container').classList.add('hidden');
+            }
+
+            document.getElementById('item-modal').classList.remove('hidden');
+        }
+
+        function renderIngredientsGrid() {
+            const container = document.getElementById('item-ingredients-grid');
+            container.innerHTML = '';
+            
+            const renderSection = (title, items) => {
+                if(items.length === 0) return '';
+                let html = `<div class="mb-4"><h3 class="text-lg font-bold text-gray-400 mb-2">${title}</h3><div class="grid grid-cols-2 lg:grid-cols-4 gap-3">`;
+                items.forEach(ing => {
+                    const priceLabel = ing.price > 0 ? `<div class="text-sm font-bold text-green-400 font-mono mt-1">€${ing.price.toFixed(2)}</div>` : '';
+                    html += `
+                        <div class="bg-gray-700 p-4 rounded flex flex-col items-center justify-between shadow">
+                            <span class="font-bold text-center text-lg leading-tight mb-2">${ing.name}</span>
+                            ${priceLabel}
+                            <div class="flex items-center space-x-4 mt-3 bg-gray-800 rounded-full px-2 py-1 border border-gray-600">
+                                <button onclick="changeIngredientQty('${ing.name}', -1)" class="w-10 h-10 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-500 font-bold text-2xl pb-1 shadow-lg">-</button>
+                                <span class="font-bold text-xl w-6 text-center select-none">${ing.qty}</span>
+                                <button onclick="changeIngredientQty('${ing.name}', 1)" class="w-10 h-10 flex items-center justify-center rounded-full bg-green-600 hover:bg-green-500 font-bold text-2xl pb-1 shadow-lg">+</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div></div>`;
+                return html;
+            }
+
+            const baseComps = tempIngredients.filter(i => i.type === 'base');
+            const additions = tempIngredients.filter(i => i.type === 'addition');
+            container.innerHTML += renderSection('Componenti Base', baseComps);
+            container.innerHTML += renderSection('Aggiunte Opzionali', additions);
+        }
+
+        function changeIngredientQty(name, delta) {
+            const ing = tempIngredients.find(i => i.name === name);
+            if (ing) {
+                ing.qty += delta;
+                if (ing.qty < 0) ing.qty = 0;
+                renderIngredientsGrid();
+            }
+        }
+
+        function closeItemModal() {
+            document.getElementById('item-modal').classList.add('hidden');
+            activeCartId = null;
+        }
+
+        function saveItemModal() {
+            const item = cart.find(i => i.cart_id === activeCartId);
+            if (item) {
+                item.notes = document.getElementById('item-notes').value;
+                item.ingredients = JSON.parse(JSON.stringify(tempIngredients));
+                
+                let newPrice = item.price;
+                item.ingredients.forEach(ing => {
+                    if (ing.type === 'base') {
+                        newPrice += (ing.qty - 1) * ing.price;
+                    } else if (ing.type === 'addition') {
+                        newPrice += (ing.qty - 0) * ing.price;
+                    }
+                });
+                item.current_price = newPrice > 0 ? newPrice : 0;
+            }
+            closeItemModal();
+            render();
+        }
+
+        let discType = '%';
+        let discValStr = '0';
+        let discSubtotal = 0;
+
+        function setDiscount() {
+            discSubtotal = cart.reduce((sum, item) => sum + (item.current_price !== undefined ? item.current_price : item.price), 0);
+            document.getElementById('disc-subtotal').innerText = `€${discSubtotal.toFixed(2)}`;
+            discType = state.discount_type || '%';
+            setDiscountType(discType);
+            
+            let currentDiscFloat = state.discount || 0;
+            // Scale existing discount to integer cents for the pad
+            discValStr = Math.round(currentDiscFloat * 100).toString();
+            
+            updateDiscountUI();
+            document.getElementById('discount-modal').classList.remove('hidden');
+        }
+
+        function setDiscountType(type) {
+            discType = type;
+            document.getElementById('btn-disc-pct').className = `px-4 py-2 text-2xl font-bold rounded-l border ${type === '%' ? 'bg-blue-600 border-blue-600' : 'bg-gray-700 border-gray-600'}`;
+            document.getElementById('btn-disc-eur').className = `px-4 py-2 text-2xl font-bold rounded-r border ${type === '€' ? 'bg-blue-600 border-blue-600' : 'bg-gray-700 border-gray-600'}`;
+            updateDiscountUI();
+        }
+
+        function numpadPress(val) {
+            if (val === 'C') {
+                discValStr = '0';
+            } else if (val === '.') {
+                // Dot ignored in money calculator mode
+            } else {
+                if (discValStr === '0') discValStr = val.toString();
+                else discValStr += val.toString();
+            }
+            updateDiscountUI();
+        }
+        
+        function getDiscountFormatted() {
+            let val = parseInt(discValStr) || 0;
+            return (val / 100).toFixed(2);
+        }
+
+        function updateDiscountUI() {
+            let formatted = getDiscountFormatted();
+            document.getElementById('discount-input').value = formatted;
+            let valNum = parseFloat(formatted) || 0;
+            let discAmt = 0;
+            if (discType === '%') {
+                discAmt = discSubtotal * (valNum / 100);
+            } else {
+                discAmt = valNum;
+            }
+            if (discAmt > discSubtotal) discAmt = discSubtotal;
+            const newTotal = discSubtotal - discAmt;
+            document.getElementById('disc-total').innerText = `€${newTotal.toFixed(2)}`;
+        }
+
+        function applyDiscount() {
+            state.discount = parseFloat(getDiscountFormatted()) || 0;
+            state.discount_type = discType;
+            closeDiscountModal();
+            render();
+        }
+
+        function closeDiscountModal() {
+            document.getElementById('discount-modal').classList.add('hidden');
+        }
+
+        // Logic for selectTable goes here...
+
+        let varieValStr = '0';
+
+        function openVarieModal() {
+            varieValStr = '0';
+            document.getElementById('varie-input').value = varieValStr;
+            document.getElementById('varie-modal').classList.remove('hidden');
+        }
+
+        function closeVarieModal() {
+            document.getElementById('varie-modal').classList.add('hidden');
+        }
+
+        function numpadPressVarie(val) {
+            if (val === 'C') {
+                varieValStr = '0';
+            } else if (val === '.') {
+                if (!varieValStr.includes('.')) varieValStr += '.';
+            } else {
+                if (varieValStr === '0') varieValStr = val.toString();
+                else varieValStr += val.toString();
+            }
+            document.getElementById('varie-input').value = varieValStr;
+        }
+
+        function applyVarie() {
+            let amount = parseFloat(varieValStr) || 0;
+            if (amount > 0) {
+                cart.push({
+                    description: "VARIE",
+                    price: amount,
+                    category: "varie",
+                    image_url: "",
+                    components: "",
+                    is_combo: false,
+                    cart_id: Date.now().toString() + Math.random().toString(),
+                    notes: '',
+                    ingredients: []
+                });
+                render();
+            }
+            closeVarieModal();
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

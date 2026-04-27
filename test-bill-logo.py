@@ -114,19 +114,5 @@ def print_bill(printer_ip, port=9100):
         print(f"Connection failed: {e}")
 
 
-def print_stored_logo(printer_ip, port=9100):
-    print_logo = b'\x1c\x70\x01\x00'
-
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(5)
-            s.connect((printer_ip, port))
-            s.sendall(init + print_logo  + cut)
-            print(f"Sent to {printer_ip}")
-    except Exception as e:
-        print(f"Connection failed: {e}")
-
-
 if __name__ == "__main__":
     print_bill("10.0.0.200")
-    #print_stored_logo("10.0.0.200")

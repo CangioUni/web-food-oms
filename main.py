@@ -482,11 +482,14 @@ def import_menu_json(payload: ImportMenuPayload):
             db.execute(text("DELETE FROM categories"))
             db.execute(text("DELETE FROM sqlite_sequence WHERE name='categories'"))
             db.commit()
+
+        existing_names = {name for (name,) in db.query(Category.name).all()}
             
         for c in cats:
-            existing = db.query(Category).filter(Category.name == c.get("name")).first()
-            if not existing and c.get("name"):
-                db.add(Category(name=c.get("name")))
+            c_name = c.get("name")
+            if c_name and c_name not in existing_names:
+                db.add(Category(name=c_name))
+                existing_names.add(c_name)
                 
         for i in items:
             new_item = MenuItem(

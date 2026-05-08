@@ -12,14 +12,14 @@
 
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
-    <div class="bg-gray-900 text-white p-3 flex justify-between items-center">
-        <h1 class="font-bold">Burger Station v1.0</h1>
+    <div id="main-header" class="bg-gray-900 text-white p-3 flex justify-between items-center">
+        <h1 class="header-title">Burger Station v1.0</h1>
         <div class="flex items-center space-x-2">
             <a href="/static/orders.html"
-                class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1 rounded font-bold text-white no-underline text-center">📜
+                class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1 rounded header-btn text-white no-underline text-center">📜
                 Ordini Recenti</a>
             <a href="/static/editor.html"
-                class="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded font-bold text-white no-underline text-center">🍔
+                class="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded header-btn text-white no-underline text-center">🍔
                 Editor Menu</a>
             <button onclick="openSettings()" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">⚙️
                 Impostazioni</button>
@@ -30,55 +30,55 @@
     </div>
 
     <div class="flex flex-grow overflow-hidden">
-        <div class="w-1/3 bg-white border-r flex flex-col p-4">
-            <h2 class="text-xl font-bold border-b pb-2 mb-4 flex justify-between items-center">
+        <div id="cart-panel" class="bg-white border-r flex flex-col p-4">
+            <h2 class="cart-header-title border-b pb-2 mb-4 flex justify-between items-center">
                 <span>Ordine Attuale</span>
                 <input type="number" id="custom-order-id" placeholder="ID (Auto)"
-                    class="w-24 text-center border-b-2 border-gray-400 focus:outline-none focus:border-blue-500 font-mono text-lg bg-gray-50 rounded"
+                    class="cart-input-id text-center border-b-2 border-gray-400 focus:outline-none focus:border-blue-500 font-mono  bg-gray-50 rounded"
                     title="Lascia vuoto per numero automatico">
             </h2>
             <div id="cart-items" class="flex-grow overflow-y-auto space-y-2"></div>
             <div class="border-t pt-4">
-                <div class="flex justify-between text-xl text-gray-600 font-bold mb-1">
+                <div class="flex justify-between cart-summary-text text-gray-600 mb-1">
                     <span>Subtotale:</span>
                     <span id="cart-subtotal">€0.00</span>
                 </div>
-                <div class="flex justify-between text-xl text-red-500 font-bold mb-2">
+                <div class="flex justify-between cart-summary-text text-red-500 mb-2">
                     <span>Sconto:</span>
                     <span id="cart-discount">-€0.00</span>
                 </div>
-                <div class="flex justify-between text-3xl font-bold border-t pt-2 mt-2">
+                <div class="flex justify-between cart-total-text border-t pt-2 mt-2">
                     <span>Totale:</span>
                     <span id="cart-total">€0.00</span>
                 </div>
                 <button onclick="openPaymentModal()"
-                    class="w-full bg-red-600 hover:bg-red-500 text-white py-4 rounded font-black text-2xl mt-4">INVIA
+                    class="w-full bg-red-600 hover:bg-red-500 text-white py-4 rounded cart-submit-btn mt-4">INVIA
                     ORDINE</button>
             </div>
         </div>
 
-        <div class="w-2/3 flex">
-            <div id="category-sidebar" class="w-32 p-2 bg-gray-200 border-r flex flex-col items-center py-4 space-y-4">
+        <div id="main-panel" class="flex">
+            <div id="category-sidebar" class="p-2 bg-gray-200 border-r flex flex-col items-center py-4 space-y-4">
             </div>
             <div class="flex-grow flex flex-col">
                 <div id="menu-grid"
                     class="grid grid-cols-3 xl:grid-cols-5 gap-3 p-3 overflow-y-auto flex-grow content-start"></div>
                 <div class="bg-gray-800 p-3 grid grid-cols-6 gap-2 flex-shrink-0">
                     <button onclick="setDiscount()"
-                        class="action-bar-btn bg-yellow-600 text-white rounded flex flex-col items-center justify-center font-bold text-2xl shadow-lg border-2 border-yellow-500">Sconto
+                        class="action-bar-btn bg-yellow-600 text-white rounded flex flex-col items-center justify-center shadow-lg border-2 border-yellow-500">Sconto
                         %</button>
                     <button onclick="toggleTakeaway()" id="btn-takeaway"
-                        class="action-bar-btn bg-gray-600 text-white rounded flex flex-col items-center justify-center font-bold text-2xl shadow-lg border-2 border-gray-500">Asporto<br><span
-                            id="lbl-asporto" class="text-2xl mt-1 text-gray-300">NO</span></button>
+                        class="action-bar-btn bg-gray-600 text-white rounded flex flex-col items-center justify-center shadow-lg border-2 border-gray-500">Asporto<br><span
+                            id="lbl-asporto" class="action-bar-subtext mt-1 text-gray-300">NO</span></button>
                     <button onclick="openTableModal()"
-                        class="action-bar-btn bg-purple-600 text-white rounded flex flex-col items-center justify-center font-bold text-2xl shadow-lg border-2 border-purple-500">Tavolo<br><span
-                            id="lbl-table" class="text-2xl mt-1 text-purple-200">Nessuno</span></button>
+                        class="action-bar-btn bg-purple-600 text-white rounded flex flex-col items-center justify-center shadow-lg border-2 border-purple-500">Tavolo<br><span
+                            id="lbl-table" class="action-bar-subtext mt-1 text-purple-200">Nessuno</span></button>
                     <button onclick="openOrderNotesModal()"
-                        class="action-bar-btn bg-blue-600 text-white rounded flex flex-col items-center justify-center font-bold text-2xl shadow-lg border-2 border-blue-500">Note<br>Ordine</button>
+                        class="action-bar-btn bg-blue-600 text-white rounded flex flex-col items-center justify-center shadow-lg border-2 border-blue-500">Note<br>Ordine</button>
                     <button onclick="openVarieModal()"
-                        class="action-bar-btn bg-pink-600 text-white rounded flex flex-col items-center justify-center font-bold text-2xl shadow-lg border-2 border-pink-500">VARIE</button>
+                        class="action-bar-btn bg-pink-600 text-white rounded flex flex-col items-center justify-center shadow-lg border-2 border-pink-500">VARIE</button>
                     <button onclick="reprint()"
-                        class="action-bar-btn bg-gray-500 text-white rounded flex flex-col items-center justify-center font-bold text-2xl shadow-lg border-2 border-gray-400">Ristampa</button>
+                        class="action-bar-btn bg-gray-500 text-white rounded flex flex-col items-center justify-center shadow-lg border-2 border-gray-400">Ristampa</button>
                 </div>
             </div>
         </div>
@@ -86,9 +86,9 @@
 
     <div id="success-overlay"
         class="hidden fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center text-white z-50 overflow-y-auto py-10">
-        <h2 class="text-6xl font-bold mb-2 text-green-500">STAMPATO!</h2>
-        <p class="text-xl mb-4 text-gray-300">Numero Ordine: <span id="final-order-id"
-                class="font-mono text-3xl font-bold text-yellow-400">000</span></p>
+        <h2 class="success-title mb-2 text-green-500">STAMPATO!</h2>
+        <p class="success-subtitle mb-4 text-gray-300">Numero Ordine: <span id="final-order-id"
+                class="font-mono success-order-id text-yellow-400">000</span></p>
 
         <div id="success-order-details"
             class="bg-gray-800 p-6 rounded text-left w-1/3 min-w-[400px] mb-8 overflow-y-auto max-h-96 text-xl border border-gray-700">
@@ -97,10 +97,10 @@
 
         <div class="flex space-x-6 w-1/3 min-w-[400px]">
             <button onclick="resetOrder()"
-                class="bg-white hover:bg-gray-200 text-black py-4 rounded-full text-xl font-bold flex-1 shadow">NUOVO
+                class="bg-white hover:bg-gray-200 text-black py-4 rounded-full modal-btn flex-1 shadow">NUOVO
                 ORDINE</button>
             <button onclick="printBill()"
-                class="bg-yellow-600 hover:bg-yellow-500 text-white py-4 rounded-full text-xl font-bold flex-1 shadow">Stampa
+                class="bg-yellow-600 hover:bg-yellow-500 text-white py-4 rounded-full modal-btn flex-1 shadow">Stampa
                 Scontrino</button>
         </div>
     </div>
@@ -109,43 +109,43 @@
     <div id="table-modal"
         class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
         <div class="bg-gray-800 p-8 rounded-lg w-1/3 min-w-[400px] border border-gray-600">
-            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Seleziona Tavolo</h2>
+            <h2 class="modal-title mb-4 border-b border-gray-600 pb-2">Seleziona Tavolo</h2>
             <input type="text" id="table-input"
-                class="w-full bg-gray-700 text-white text-4xl font-mono text-center p-4 rounded mb-6 border border-gray-600"
+                class="w-full bg-gray-700 text-white numpad-input font-mono text-center p-4 rounded mb-6 border border-gray-600"
                 readonly>
             <div class="grid grid-cols-3 gap-3 mb-6">
                 <button onclick="tablePress('1')"
-                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">1</button>
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 numpad-btn shadow">1</button>
                 <button onclick="tablePress('2')"
-                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">2</button>
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 numpad-btn shadow">2</button>
                 <button onclick="tablePress('3')"
-                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">3</button>
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 numpad-btn shadow">3</button>
                 <button onclick="tablePress('4')"
-                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">4</button>
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 numpad-btn shadow">4</button>
                 <button onclick="tablePress('5')"
-                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">5</button>
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 numpad-btn shadow">5</button>
                 <button onclick="tablePress('6')"
-                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">6</button>
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 numpad-btn shadow">6</button>
                 <button onclick="tablePress('7')"
-                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">7</button>
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 numpad-btn shadow">7</button>
                 <button onclick="tablePress('8')"
-                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">8</button>
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 numpad-btn shadow">8</button>
                 <button onclick="tablePress('9')"
-                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">9</button>
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 numpad-btn shadow">9</button>
                 <button onclick="tablePress('A')"
-                    class="bg-purple-600 p-6 rounded hover:bg-purple-500 font-bold text-4xl shadow text-purple-100">A</button>
+                    class="bg-purple-600 p-6 rounded hover:bg-purple-500 numpad-btn shadow text-purple-100">A</button>
                 <button onclick="tablePress('0')"
-                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 font-bold text-4xl shadow">0</button>
+                    class="bg-gray-600 p-6 rounded hover:bg-gray-500 numpad-btn shadow">0</button>
                 <button onclick="tablePress('B')"
-                    class="bg-purple-600 p-6 rounded hover:bg-purple-500 font-bold text-4xl shadow text-purple-100">B</button>
+                    class="bg-purple-600 p-6 rounded hover:bg-purple-500 numpad-btn shadow text-purple-100">B</button>
             </div>
             <div class="flex justify-between space-x-4">
                 <button onclick="tableClear()"
-                    class="bg-red-600 px-4 py-4 rounded text-xl font-bold flex-1 shadow">Cancella</button>
+                    class="bg-red-600 px-4 py-4 rounded modal-btn flex-1 shadow">Cancella</button>
                 <button onclick="closeTableModal()"
-                    class="bg-gray-600 px-4 py-4 rounded text-xl font-bold flex-1 shadow">Annulla</button>
+                    class="bg-gray-600 px-4 py-4 rounded modal-btn flex-1 shadow">Annulla</button>
                 <button onclick="saveTableModal()"
-                    class="bg-green-600 px-4 py-4 rounded text-xl font-bold flex-1 shadow">Applica</button>
+                    class="bg-green-600 px-4 py-4 rounded modal-btn flex-1 shadow">Applica</button>
             </div>
         </div>
     </div>
@@ -154,14 +154,14 @@
     <div id="order-notes-modal"
         class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
         <div class="bg-gray-800 p-8 rounded-lg w-1/2 border border-gray-600">
-            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Note all'Ordine</h2>
+            <h2 class="modal-title mb-4 border-b border-gray-600 pb-2">Note all'Ordine</h2>
             <textarea id="order-notes-input"
                 class="w-full bg-gray-700 text-white p-4 rounded border border-gray-600 h-32 text-2xl"
                 placeholder="Ad esempio: Tutto ben cotto, cliente allergico..."></textarea>
             <div class="flex justify-end space-x-4 mt-6">
                 <button onclick="closeOrderNotesModal()"
-                    class="bg-gray-600 px-8 py-3 rounded text-2xl font-bold">Annulla</button>
-                <button onclick="saveOrderNotesModal()" class="bg-green-600 px-8 py-3 rounded text-2xl font-bold">Salva
+                    class="bg-gray-600 px-8 py-3 rounded modal-btn">Annulla</button>
+                <button onclick="saveOrderNotesModal()" class="bg-green-600 px-8 py-3 rounded modal-btn">Salva
                     Note</button>
             </div>
         </div>
@@ -171,7 +171,7 @@
     <div id="item-modal"
         class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
         <div class="bg-gray-800 p-8 rounded-lg w-1/2">
-            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Opzioni Articolo</h2>
+            <h2 class="modal-title mb-4 border-b border-gray-600 pb-2">Opzioni Articolo</h2>
             <div class="mb-4">
                 <label class="block mb-2 font-bold text-xl">Note</label>
                 <textarea id="item-notes"
@@ -184,9 +184,9 @@
             </div>
             <div class="flex justify-end space-x-4">
                 <button onclick="closeItemModal()"
-                    class="bg-gray-600 px-6 py-2 rounded text-xl font-bold">Annulla</button>
+                    class="bg-gray-600 px-6 py-2 rounded modal-btn">Annulla</button>
                 <button onclick="saveItemModal()"
-                    class="bg-green-600 px-6 py-2 rounded text-xl font-bold">Aggiorna</button>
+                    class="bg-green-600 px-6 py-2 rounded modal-btn">Aggiorna</button>
             </div>
         </div>
     </div>
@@ -195,13 +195,13 @@
     <div id="discount-modal"
         class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
         <div class="bg-gray-800 p-8 rounded-lg w-1/3 min-w-[400px]">
-            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Imposta Sconto</h2>
+            <h2 class="modal-title mb-4 border-b border-gray-600 pb-2">Imposta Sconto</h2>
 
             <div class="flex justify-between items-end mb-4">
                 <div class="flex-grow flex flex-col">
                     <label class="block text-gray-400 font-bold mb-1">Importo</label>
                     <input type="text" id="discount-input"
-                        class="w-full bg-gray-700 text-white text-3xl p-2 rounded border border-gray-600 text-right"
+                        class="w-full bg-gray-700 text-white numpad-input p-2 rounded border border-gray-600 text-right"
                         readonly value="0">
                 </div>
                 <div class="flex ml-2 pb-1 text-white">
@@ -238,9 +238,9 @@
 
             <div class="flex justify-end space-x-4 border-t border-gray-600 pt-4">
                 <button onclick="closeDiscountModal()"
-                    class="bg-gray-600 px-6 py-3 rounded text-2xl font-bold">Annulla</button>
+                    class="bg-gray-600 px-6 py-3 rounded modal-btn">Annulla</button>
                 <button onclick="applyDiscount()"
-                    class="bg-green-600 px-6 py-3 rounded text-2xl font-bold">Applica</button>
+                    class="bg-green-600 px-6 py-3 rounded modal-btn">Applica</button>
             </div>
         </div>
     </div>
@@ -248,7 +248,7 @@
     <div id="settings-overlay"
         class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
         <div class="bg-gray-800 p-8 rounded-lg w-1/2">
-            <h2 class="text-3xl font-bold mb-6 border-b border-gray-600 pb-2">Impostazioni</h2>
+            <h2 class="modal-title mb-6 border-b border-gray-600 pb-2">Impostazioni</h2>
             <div class="mb-4">
                 <label class="block mb-2 font-bold">IP Stampante Scontrini</label>
                 <div class="flex space-x-2">
@@ -283,8 +283,8 @@
             </div>
             <div class="flex justify-end space-x-4">
                 <button onclick="closeSettings()"
-                    class="bg-gray-600 px-6 py-2 rounded text-xl font-bold">Annulla</button>
-                <button onclick="saveSettings()" class="bg-green-600 px-6 py-2 rounded text-xl font-bold">Salva</button>
+                    class="bg-gray-600 px-6 py-2 rounded modal-btn">Annulla</button>
+                <button onclick="saveSettings()" class="bg-green-600 px-6 py-2 rounded modal-btn">Salva</button>
             </div>
         </div>
     </div>
@@ -293,14 +293,14 @@
     <div id="combo-modal"
         class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
         <div class="bg-gray-800 p-8 rounded-lg w-1/2">
-            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Configura Menù</h2>
+            <h2 class="modal-title mb-4 border-b border-gray-600 pb-2">Configura Menù</h2>
             <div id="combo-slots-container" class="mb-6 space-y-4">
                 <!-- dynamic slots here -->
             </div>
             <div class="flex justify-end space-x-4">
                 <button onclick="closeComboModal()"
-                    class="bg-gray-600 px-6 py-2 rounded text-xl font-bold">Annulla</button>
-                <button onclick="confirmComboModal()" class="bg-green-600 px-6 py-2 rounded text-xl font-bold">Aggiungi
+                    class="bg-gray-600 px-6 py-2 rounded modal-btn">Annulla</button>
+                <button onclick="confirmComboModal()" class="bg-green-600 px-6 py-2 rounded modal-btn">Aggiungi
                     al Carrello</button>
             </div>
         </div>
@@ -310,7 +310,7 @@
     <div id="payment-modal"
         class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
         <div class="bg-gray-800 p-8 rounded-lg w-1/3 min-w-[400px]">
-            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Metodo di Pagamento</h2>
+            <h2 class="modal-title mb-4 border-b border-gray-600 pb-2">Metodo di Pagamento</h2>
 
             <div class="grid grid-cols-2 gap-4 mb-8 mt-4">
                 <button id="btn-pay-cash" onclick="selectPayment('Cash')"
@@ -334,12 +334,12 @@
     <div id="varie-modal"
         class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
         <div class="bg-gray-800 p-8 rounded-lg w-1/3 min-w-[400px]">
-            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Aggiungi VARIE</h2>
+            <h2 class="modal-title mb-4 border-b border-gray-600 pb-2">Aggiungi VARIE</h2>
 
             <div class="mb-4">
                 <label class="block text-gray-400 font-bold mb-1">Importo (€)</label>
                 <input type="text" id="varie-input"
-                    class="w-full bg-gray-700 text-white text-3xl p-2 rounded border border-gray-600 text-right"
+                    class="w-full bg-gray-700 text-white numpad-input p-2 rounded border border-gray-600 text-right"
                     readonly value="0">
             </div>
 
@@ -360,9 +360,9 @@
 
             <div class="flex justify-end space-x-4 border-t border-gray-600 pt-4">
                 <button onclick="closeVarieModal()"
-                    class="bg-gray-600 px-6 py-3 rounded text-2xl font-bold">Annulla</button>
+                    class="bg-gray-600 px-6 py-3 rounded modal-btn">Annulla</button>
                 <button onclick="applyVarie()"
-                    class="bg-green-600 px-6 py-3 rounded text-2xl font-bold">Aggiungi</button>
+                    class="bg-green-600 px-6 py-3 rounded modal-btn">Aggiungi</button>
             </div>
         </div>
     </div>
@@ -413,7 +413,7 @@
             const catSidebar = document.getElementById('category-sidebar');
             catSidebar.innerHTML = '';
             categoriesData.forEach(c => {
-                catSidebar.innerHTML += `<button onclick="setCategory('${c.name}')" class="w-20 h-20 bg-white rounded-lg shadow font-bold hover:bg-yellow-100 flex items-center justify-center text-center capitalize">${c.name}</button>`;
+                catSidebar.innerHTML += `<button onclick="setCategory('${c.name}')" class="w-20 h-20 bg-white rounded-lg shadow cat-btn-text hover:bg-yellow-100 flex items-center justify-center text-center capitalize">${c.name}</button>`;
             });
 
             await loadRemoteState();
@@ -613,8 +613,8 @@
                 grid.innerHTML += `
                     <button onclick="addToCart(${JSON.stringify(item).replace(/"/g, '&quot;')})" class="bg-white p-2 rounded shadow hover:shadow-lg flex flex-col items-center justify-center aspect-square">
                         <img src="${item.image_url}" class="w-full h-1/2 object-cover rounded mb-2">
-                        <span class="font-black text-lg block text-black leading-tight w-full truncate">${item.description}</span>
-                        <span class="text-green-600 font-bold text-xl font-mono mt-1">€${item.price.toFixed(2)}</span>
+                        <span class="menu-item-title block text-black leading-tight w-full truncate">${item.description}</span>
+                        <span class="text-green-600 menu-item-price font-mono mt-1">€${item.price.toFixed(2)}</span>
                     </button>`;
             });
         }
@@ -697,7 +697,7 @@
 
             slots.forEach((slot, idx) => {
                 if (slot.length === 0) return;
-                let html = `<div class="bg-gray-700 p-4 rounded"><h3 class="font-bold text-xl mb-2 text-yellow-400">Selezione ${idx + 1}</h3><div class="flex flex-wrap gap-2">`;
+                let html = `<div class="bg-gray-700 p-4 rounded"><h3 class="cart-header-title mb-2 text-yellow-400">Selezione ${idx + 1}</h3><div class="flex flex-wrap gap-2">`;
 
                 if (slot.length === 1) {
                     html += `<div class="bg-blue-600 px-4 py-2 rounded font-bold border-2 border-blue-400">
@@ -776,12 +776,12 @@
                         }
                     });
                 }
-                const ingredText = ingLabels.length > 0 ? `<div class="text-m text-blue-600">${ingLabels.join(', ')}</div>` : '';
-                const notesText = item.notes ? `<div class="text-m text-gray-500 italic">Note: ${item.notes}</div>` : '';
+                const ingredText = ingLabels.length > 0 ? `<div class="cart-item-details text-blue-600">${ingLabels.join(', ')}</div>` : '';
+                const notesText = item.notes ? `<div class="cart-item-details text-gray-500 italic">Note: ${item.notes}</div>` : '';
 
                 let comboHtml = '';
                 if (item.combo_choices && item.combo_choices.length > 0) {
-                    comboHtml = item.combo_choices.map(c => `<div class="text-m text-purple-700 pl-2">&bull; ${c}</div>`).join('');
+                    comboHtml = item.combo_choices.map(c => `<div class="cart-item-details text-purple-700 pl-2">&bull; ${c}</div>`).join('');
                 }
 
                 container.innerHTML += `
@@ -790,11 +790,11 @@
                             ☰
                         </div>
                         <div class="text-xl flex-grow cursor-pointer" onclick="openItemModal('${item.cart_id}')">
-                            <div class="font-bold text-black">${item.description}${item.combo_choices && item.combo_choices.length > 0 ? ':' : ''}</div>
+                            <div class="cart-item-title text-black">${item.description}${item.combo_choices && item.combo_choices.length > 0 ? ':' : ''}</div>
                             ${comboHtml}
                             ${ingredText}
                             ${notesText}
-                            <div class="text-xl font-mono text-black">€${itemPrice.toFixed(2)}</div>
+                            <div class="cart-item-price font-mono text-black">€${itemPrice.toFixed(2)}</div>
                         </div>
                         <div class="flex items-center space-x-3 ml-2">
                             <button onclick="removeFromCart('${item.cart_id}', event)" class="w-8 h-8 bg-red-100 rounded text-red-700 font-bold">X</button>
@@ -922,7 +922,7 @@
                 if(lblTake) {
                     lblTake.innerText = "NO";
                 } else {
-                    btnTake.innerHTML = `Asporto<br><span id="lbl-asporto" class="text-2xl mt-1 text-gray-300">NO</span>`;
+                    btnTake.innerHTML = `Asporto<br><span id="lbl-asporto" class="action-bar-subtext mt-1 text-gray-300">NO</span>`;
                 }
                 
                 if (window.history.replaceState) {

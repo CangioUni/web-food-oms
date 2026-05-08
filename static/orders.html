@@ -6,17 +6,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-8 h-screen flex flex-col text-lg lg:text-xl">
-    <div class="flex justify-between items-center mb-8 bg-gray-900 text-white p-4 rounded shadow">
-        <h1 class="text-3xl font-bold">⚠️ Ordini da Pagare</h1>
+    <div id="main-header" class="flex justify-between items-center mb-8 bg-gray-900 text-white p-4 rounded shadow">
+        <h1 class="header-title">⚠️ Ordini da Pagare</h1>
         <div class="space-x-4">
-            <a href="/static/orders_completed.html" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded font-bold text-white no-underline text-center">✅ Ordini Pagati</a>
-            <a href="/export/orders" target="_blank" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded font-bold text-white no-underline text-center">📄 Esporta PDF</a>
-            <a href="/" class="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded font-bold text-white no-underline text-center">Torna al POS</a>
+            <a href="/static/orders_completed.html" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded header-btn text-white no-underline text-center">✅ Ordini Pagati</a>
+            <a href="/export/orders" target="_blank" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded header-btn text-white no-underline text-center">📄 Esporta PDF</a>
+            <a href="/" class="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded header-btn text-white no-underline text-center">Torna al POS</a>
         </div>
     </div>
     
-    <div class="bg-white p-6 rounded shadow flex flex-col flex-grow overflow-hidden">
-        <h2 class="text-xl font-bold mb-4 border-b pb-2">Ordini In Sospeso</h2>
+    <div id="main-panel" class="bg-white p-6 rounded shadow flex flex-col flex-grow overflow-hidden order-list-container">
+        <h2 class="order-list-header border-b pb-2 mb-4">Ordini In Sospeso</h2>
         <div id="order-list" class="flex-grow overflow-y-auto space-y-4 pr-2">
             <!-- Dynamic Content -->
         </div>
@@ -48,23 +48,23 @@
 
                 let itemsHtml = '';
                 o.items.forEach(i => {
-                    const ingrStr = i.ingredients ? `<div class="text-sm text-blue-600">${i.ingredients}</div>` : '';
-                    const notesStr = i.notes ? `<div class="text-sm text-gray-500 italic">Nota: ${i.notes}</div>` : '';
+                    const ingrStr = i.ingredients ? `<div class="cart-item-details text-blue-600">${i.ingredients}</div>` : '';
+                    const notesStr = i.notes ? `<div class="cart-item-details text-gray-500 italic">Nota: ${i.notes}</div>` : '';
                     
                     let comboStr = '';
                     if (i.combo_choices) {
-                        comboStr = i.combo_choices.split(',').map(c => `<div class="text-sm text-purple-700 pl-3">&bull; ${c.trim()}</div>`).join('');
+                        comboStr = i.combo_choices.split(',').map(c => `<div class="cart-item-details text-purple-700 pl-3">&bull; ${c.trim()}</div>`).join('');
                     }
                     
                     itemsHtml += `
                         <div class="flex justify-between border-b border-gray-200 py-1">
                             <div>
-                                <span class="font-bold text-gray-800">${i.description}${i.combo_choices ? ':' : ''}</span>
+                                <span class="order-detail-title text-gray-800">${i.description}${i.combo_choices ? ':' : ''}</span>
                                 ${comboStr}
                                 ${ingrStr}
                                 ${notesStr}
                             </div>
-                            <div class="font-mono text-green-700">€${i.price_at_sale.toFixed(2)}</div>
+                            <div class="order-detail-price font-mono text-green-700">€${i.price_at_sale.toFixed(2)}</div>
                         </div>
                     `;
                 });
@@ -73,15 +73,15 @@
                     <div class="border rounded shadow-sm bg-gray-50">
                         <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-100" onclick="toggleDetails(${o.id})">
                             <div class="flex space-x-6 items-center">
-                                <span class="font-black text-3xl text-gray-800">#${o.id}</span>
+                                <span class="order-item-id text-gray-800">#${o.id}</span>
                                 <span class="text-gray-500">${dateStr}</span>
-                                ${o.takeaway ? '<span class="bg-orange-500 text-white font-bold px-3 py-1 rounded text-base">DA ASPORTO</span>' : ''}
-                                ${o.table_number && o.table_number !== "Nessuno" ? `<span class="bg-purple-600 text-white font-bold px-3 py-1 rounded text-base">Tavolo: ${o.table_number}</span>` : ''}
+                                ${o.takeaway ? '<span class="bg-orange-500 text-white order-item-badge px-3 py-1 rounded">DA ASPORTO</span>' : ''}
+                                ${o.table_number && o.table_number !== "Nessuno" ? `<span class="bg-purple-600 text-white order-item-badge px-3 py-1 rounded">Tavolo: ${o.table_number}</span>` : ''}
                             </div>
                             <div class="flex items-center space-x-4">
                                 <div class="text-right">
-                                    <div class="text-base text-red-500 font-bold">${o.discount > 0 ? "Sconto: -€" + o.discount.toFixed(2) : ""}</div>
-                                    <div class="font-black text-3xl text-red-600">€${o.total.toFixed(2)}</div>
+                                    <div class="order-item-discount text-red-500">${o.discount > 0 ? "Sconto: -€" + o.discount.toFixed(2) : ""}</div>
+                                    <div class="order-item-total text-red-600">€${o.total.toFixed(2)}</div>
                                 </div>
                                 <span id="chev-${o.id}" class="text-gray-400 font-bold text-2xl ml-4">▼</span>
                             </div>
@@ -90,9 +90,9 @@
                             <div class="flex justify-end mb-4">
                                 <a href="/?load_order=${o.id}" class="bg-orange-500 hover:bg-orange-400 text-white font-bold py-2 px-4 rounded shadow">Riprendi e Paga</a>
                             </div>
-                            <h3 class="font-bold mb-2">Articoli dell'Ordine</h3>
+                            <h3 class="order-detail-title mb-2">Articoli dell'Ordine</h3>
                             ${itemsHtml}
-                            ${o.notes ? `<div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded"><span class="font-bold text-blue-800">Note Ordine:</span><p class="text-blue-900 mt-1">${o.notes}</p></div>` : ''}
+                            ${o.notes ? `<div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded"><span class="order-detail-title text-blue-800">Note Ordine:</span><p class="text-blue-900 mt-1">${o.notes}</p></div>` : ''}
                         </div>
                     </div>
                 `;

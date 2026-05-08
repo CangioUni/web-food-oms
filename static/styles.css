@@ -1,0 +1,22 @@
+/* Ensure full viewport height on mobile/tablet */
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Bottom action bar: compact on tablets */
+@media (max-width: 1279px) {
+    .action-bar-btn {
+        aspect-ratio: auto !important;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+}
+
+/* On large screens keep aspect-square */
+@media (min-width: 1280px) {
+    .action-bar-btn {
+        aspect-ratio: 1 / 1;
+    }
+}

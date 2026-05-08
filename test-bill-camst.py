@@ -31,6 +31,8 @@ def print_bill(printer_ip: str = PRINTER_IP, port: int = PRINTER_PORT) -> None:
     p.codepage = 'cp858'
     p._raw(b'\x1b\x74\x0e')
 
+    # p.charcode('CP858')
+
 
     # ── Group header ────────────────────────────────────────────────────────
     p.set(align="center", bold=True, double_height=True)
@@ -50,7 +52,7 @@ def print_bill(printer_ip: str = PRINTER_IP, port: int = PRINTER_PORT) -> None:
     # ── Column header (double height) ────────────────────────────────────────
     # python-escpos handles the Euro sign natively via the codepage system.
     p.set(align="left", bold=True, normal_textsize=True)
-    header = build_header_row("DESCRIZIONE", 'IVA     Prezzo (\x14)') # \u20ac
+    header = build_header_row("DESCRIZIONE", 'IVA     Prezzo (\xd5)') # \u20ac
     p.text(header + "\n")
     p.set(normal_textsize=True)
 

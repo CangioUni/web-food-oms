@@ -9,6 +9,7 @@ from sqlalchemy.sql import text
 import datetime
 from fpdf import FPDF
 from escpos.printer import Network
+import socket
 
 DATABASE_URL = "sqlite:///./orders.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -183,16 +184,48 @@ def print_to_escpos(order_id: int, payload: dict):
         
         gross_total = 0.0
         
+        grouped_items = []
         for item in payload.get('items', []):
             desc = item.get('description', '')
             price = float(item.get('price', 0))
-            price_str = f"{price:.2f}"
-            gross_total += price
-            
-            p.text(build_header_row(desc, price_str, 48) + "\n")
-            
-            # Print combo selections indented
             combo_choices = item.get('combo_choices', '')
+            notes = item.get('notes', '')
+            ingredients = item.get('ingredients', '')
+            
+            is_groupable = not combo_choices and not notes and not ingredients
+            
+            if is_groupable:
+                found = False
+                for g in grouped_items:
+                    if g['groupable'] and g['description'] == desc and g['price'] == price:
+                        g['qty'] += 1
+                        found = True
+                        break
+                if not found:
+                    grouped_items.append({
+                        'groupable': True, 'description': desc, 'price': price,
+                        'qty': 1, 'combo_choices': '', 'notes': '', 'ingredients': ''
+                    })
+            else:
+                grouped_items.append({
+                    'groupable': False, 'description': desc, 'price': price,
+                    'qty': 1, 'combo_choices': combo_choices, 'notes': notes, 'ingredients': ingredients
+                })
+                
+        for item in grouped_items:
+            desc = item['description']
+            price = item['price']
+            qty = item['qty']
+            item_total = price * qty
+            gross_total += item_total
+            
+            if qty > 1:
+                p.text(f"{qty} x {price:.2f}".replace('.', ',') + "\n")
+                p.text(build_header_row(desc, f"{item_total:.2f}".replace('.', ','), 48) + "\n")
+            else:
+                p.text(build_header_row(desc, f"{price:.2f}".replace('.', ','), 48) + "\n")
+            
+            combo_choices = item['combo_choices']
             if combo_choices:
                 for sub in combo_choices.split(','):
                     sub_clean = sub.strip()
@@ -204,7 +237,7 @@ def print_to_escpos(order_id: int, payload: dict):
         
         # Total
         p.set(align="left", double_height=True)
-        total_str = f"{gross_total:.2f}"
+        total_str = f"{gross_total:.2f}".replace('.', ',')
         p.text(build_header_row("TOTALE", total_str, 48) + "\n")
         p.set(normal_textsize=True)
         
@@ -261,6 +294,21 @@ def update_settings(payload: SettingsUpdate):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
+
+@app.get("/test-printer")
+def test_printer(ip: str, port: int = 9100):
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(3.0)
+        result = sock.connect_ex((ip, int(port)))
+        sock.close()
+        
+        if result == 0:
+            return {"status": "success", "message": f"Stampante raggiungibile su {ip}:{port}"}
+        else:
+            return {"status": "error", "message": f"Impossibile connettersi a {ip}:{port}"}
+    except Exception as e:
+        return {"status": "error", "message": f"Errore: {str(e)}"}
 
 @app.get("/users")
 def get_users():

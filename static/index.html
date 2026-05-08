@@ -367,7 +367,23 @@
         </div>
     </div>
 
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col space-y-3 pointer-events-none"></div>
+
     <script>
+        function showToast(title, message, isSuccess) {
+            const container = document.getElementById('toast-container');
+            if(!container) return;
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded shadow-2xl text-white w-80 pointer-events-auto transition-opacity duration-500 opacity-100 border-l-4 border-white ${isSuccess ? 'bg-green-600' : 'bg-red-600'}`;
+            toast.innerHTML = `<div class="font-bold text-xl">${title}</div><div class="text-sm mt-1">${message}</div>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.replace('opacity-100', 'opacity-0');
+                setTimeout(() => toast.remove(), 500);
+            }, 6000);
+        }
+
         let menuData = [];
         let categoriesData = [];
         let activeCategory = 'panini';
@@ -811,8 +827,25 @@
         }
 
         async function checkout(isPaid) {
+            // Disable buttons and show loading state
+            const btnPagaDopo = document.querySelector('button[onclick="checkout(false)"]');
+            const btnConferma = document.querySelector('button[onclick="checkout(true)"]');
+            
+            if(btnPagaDopo) {
+                btnPagaDopo.disabled = true;
+                btnPagaDopo.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            if(btnConferma) {
+                btnConferma.disabled = true;
+                btnConferma.classList.add('opacity-50', 'cursor-not-allowed');
+                btnConferma.innerText = "Elaborazione...";
+            }
+
             closePaymentModal();
-            if (cart.length === 0) return alert("Il carrello è vuoto");
+            if (cart.length === 0) {
+                if(btnConferma) btnConferma.innerText = "Conferma Pagamento";
+                return alert("Il carrello è vuoto");
+            }
 
             const method = isPaid ? (state.payment_method || 'Cash') : '';
 
@@ -859,68 +892,82 @@
                 payload.order_id = customId;
             }
 
-            const resp = await fetch('/order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const result = await resp.json();
-            if (result.status === 'success') {
-                document.getElementById('final-order-id').innerText = result.order_id;
-
-                let summaryHtml = '<ul class="space-y-4">';
-                cart.forEach(item => {
-                    let subHtml = '';
-                    if (item.combo_choices && item.combo_choices.length > 0) {
-                        subHtml = item.combo_choices.map(c => `<div class="text-sm text-gray-400 ml-4">&bull; ${c}</div>`).join('');
-                    }
-                    const itemPrice = item.current_price !== undefined ? item.current_price : item.price;
-                    summaryHtml += `<li><div class="font-bold flex justify-between"><span>1x ${item.description}</span><span class="text-gray-300">€${itemPrice.toFixed(2)}</span></div>${subHtml}</li>`;
+            try {
+                const resp = await fetch('/order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
 
-                let subVal = cart.reduce((acc, curr) => acc + (curr.current_price !== undefined ? curr.current_price : curr.price), 0);
-                let discVal = state.discount_type === '%' ? subVal * ((state.discount || 0) / 100) : (state.discount || 0);
-                if (discVal > subVal) discVal = subVal;
-                let totVal = subVal - discVal;
+                if (!resp.ok) {
+                    throw new Error(`Errore Server: ${resp.status}`);
+                }
 
-                summaryHtml += `</ul>
-                <div class="border-t border-gray-600 mt-4 pt-4 flex flex-col items-end">
-                    ${discVal > 0 ? `<div class="text-lg text-red-400">Sconto: -€${discVal.toFixed(2)}</div>` : ''}
-                    <div class="text-3xl font-black text-green-400 mt-1">TOTALE: €${totVal.toFixed(2)}</div>
-                    <div class="text-sm text-gray-400 mt-1 uppercase tracking-wider">Pagato via ${method}</div>
-                </div>`;
+                const result = await resp.json();
+            if (result.status === 'success') {
+                // Completely reset the POS seamlessly
+                cart = [];
+                state.table = "Nessuno";
+                state.takeaway = false;
+                state.discount = 0;
+                state.discount_type = '%';
+                state.payment_method = 'Cash';
+                state.orderNotes = '';
+                document.getElementById('custom-order-id').value = '';
+                document.getElementById('lbl-table').innerText = "Nessuno";
+                const btnTake = document.getElementById('btn-takeaway');
+                const lblTake = document.getElementById('lbl-asporto');
+                btnTake.classList.remove('bg-orange-600', 'border-orange-500');
+                btnTake.classList.add('bg-gray-600', 'border-gray-500');
+                if(lblTake) {
+                    lblTake.innerText = "NO";
+                } else {
+                    btnTake.innerHTML = `Asporto<br><span id="lbl-asporto" class="text-2xl mt-1 text-gray-300">NO</span>`;
+                }
+                
+                if (window.history.replaceState) {
+                    window.history.replaceState(null, null, window.location.pathname);
+                }
 
-                document.getElementById('success-order-details').innerHTML = summaryHtml;
-                document.getElementById('success-overlay').classList.remove('hidden');
+                render(false);
 
                 if (result.auto_print) {
-                    printBill();
+                    if (result.bill_status) {
+                        showToast(result.bill_status.printed ? "Scontrino Stampato" : "Errore Scontrino", result.bill_status.message, result.bill_status.printed);
+                    }
+                    if (result.kitchen_status && result.kitchen_status.message !== "Non necessaria / disabilitata") {
+                        showToast(result.kitchen_status.printed ? "Comanda Cucina" : "Errore Cucina", result.kitchen_status.message, result.kitchen_status.printed);
+                    }
+                } else {
+                    showToast("Ordine Salvato", `Ordine #${result.order_id} registrato senza stampa`, true);
+                }
+            } else {
+                showToast("Errore", "Impossibile salvare l'ordine. Riprova.", false);
+            }
+            } catch (err) {
+                showToast("Errore di Rete", "Il server non risponde o l'operazione è stata annullata. Errore: " + err.message, false);
+            } finally {
+                // Restore buttons
+                const btnPagaDopo = document.querySelector('button[onclick="checkout(false)"]');
+                const btnConferma = document.querySelector('button[onclick="checkout(true)"]');
+                if(btnPagaDopo) {
+                    btnPagaDopo.disabled = false;
+                    btnPagaDopo.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+                if(btnConferma) {
+                    btnConferma.disabled = false;
+                    btnConferma.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btnConferma.innerText = "Conferma Pagamento";
                 }
             }
         }
 
-        function printBill() {
-            alert("Richiesta di stampa scontrino inviata con successo alla stampante configurata!");
+        function reprint() {
+            alert("Ristampa: non ancora implementata sul backend.");
         }
 
         function resetOrder() {
-            cart = [];
-            state.table = "Nessuno";
-            state.takeaway = false;
-            state.discount = 0;
-            state.discount_type = '%';
-            state.payment_method = 'Cash';
-            state.orderNotes = '';
-            document.getElementById('custom-order-id').value = '';
-            document.getElementById('lbl-table').innerText = "Nessuno";
-            const btnTake = document.getElementById('btn-takeaway');
-            const lblTake = document.getElementById('lbl-asporto');
-            btnTake.classList.replace('bg-orange-600', 'bg-gray-600');
-            btnTake.classList.replace('border-orange-500', 'border-gray-500');
-            lblTake.innerText = "NO";
             document.getElementById('success-overlay').classList.add('hidden');
-            render();
         }
 
         async function openSettings() {
@@ -975,19 +1022,7 @@
             }
         }
 
-        function toggleTakeaway() {
-            state.takeaway = !state.takeaway;
-            const btn = document.getElementById('btn-takeaway');
-            if (state.takeaway) {
-                btn.classList.add('bg-orange-600');
-                btn.classList.remove('bg-gray-600');
-                btn.innerText = "Asporto: SI";
-            } else {
-                btn.classList.add('bg-gray-600');
-                btn.classList.remove('bg-orange-600');
-                btn.innerText = "Asporto: NO";
-            }
-        }
+
 
         let activeCartId = null;
         let tempIngredients = [];

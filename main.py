@@ -160,10 +160,9 @@ def print_to_escpos(order_id: int, payload: dict):
     port = 9100
     
     try:
-        p = Network(printer_ip, port, profile="KR-306")
+        p = Network(printer_ip, port, profile="KR-306", timeout=2.0)
         p._raw(b'\x1b\x74\x13') # CP 858
         
-        # Logo
         try:
             p.image("rblogo.png", center=True)
         except Exception as e:
@@ -272,8 +271,10 @@ def print_to_escpos(order_id: int, payload: dict):
         
         p.cut()
         p.close()
+        return True, "Scontrino stampato correttamente"
     except Exception as e:
         print(f"Error printing bill: {e}")
+        return False, f"Errore stampante scontrini: {str(e)}"
 
 def print_kitchen_receipt(order_id: int, payload: dict):
     db = SessionLocal()
@@ -284,7 +285,7 @@ def print_kitchen_receipt(order_id: int, payload: dict):
     port = 9100
 
     try:
-        p = Network(printer_ip, port, profile="KR-306")
+        p = Network(printer_ip, port, profile="KR-306", timeout=2.0)
         p._raw(b'\x1b\x74\x13') # CP 858
 
         p.set(align="center", bold=True, double_height=True, double_width=True)
@@ -364,8 +365,10 @@ def print_kitchen_receipt(order_id: int, payload: dict):
 
         p.cut()
         p.close()
+        return True, "Comanda cucina stampata correttamente"
     except Exception as e:
         print(f"Error printing kitchen receipt: {e}")
+        return False, f"Errore stampante cucina: {str(e)}"
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -608,18 +611,35 @@ def create_order(payload: dict = Body(...)):
             )
             db.add(order_item)
         
+        # Clear the user's active cart after successfully placing the order
+        user = db.query(User).filter(User.id == kwargs['user_id']).first()
+        if user:
+            user.active_cart = "[]"
+            user.active_state = "{}"
+            
         db.commit()
         
         auto_print_enabled = settings.auto_print if settings else True
+        bill_status = {"printed": False, "message": "Autostampa disabilitata"}
+        kitchen_status = {"printed": False, "message": "Non necessaria / disabilitata"}
+
         if auto_print_enabled:
             # We always print the receipt for the customer
-            print_to_escpos(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, payload)
+            b_ok, b_msg = print_to_escpos(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, payload)
+            bill_status = {"printed": b_ok, "message": b_msg}
 
             # Print to kitchen only if it is a new order
             if is_new_order:
-                print_kitchen_receipt(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, payload)
+                k_ok, k_msg = print_kitchen_receipt(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, payload)
+                kitchen_status = {"printed": k_ok, "message": k_msg}
         
-        return {"status": "success", "order_id": order_number_str, "auto_print": auto_print_enabled}
+        return {
+            "status": "success", 
+            "order_id": order_number_str, 
+            "auto_print": auto_print_enabled,
+            "bill_status": bill_status,
+            "kitchen_status": kitchen_status
+        }
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
@@ -728,9 +748,13 @@ def delete_all_orders():
     db = SessionLocal()
     try:
         db.execute(text("DELETE FROM order_items"))
-        db.execute(text("DELETE FROM sqlite_sequence WHERE name='order_items'"))
         db.execute(text("DELETE FROM orders"))
-        db.execute(text("DELETE FROM sqlite_sequence WHERE name='orders'"))
+        try:
+            db.execute(text("DELETE FROM sqlite_sequence WHERE name='order_items'"))
+            db.execute(text("DELETE FROM sqlite_sequence WHERE name='orders'"))
+        except Exception:
+            pass
+        db.execute(text("UPDATE system_settings SET next_order_number = 1"))
         db.commit()
     except Exception as e:
         db.rollback()

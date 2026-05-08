@@ -6,19 +6,19 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-8 h-screen flex flex-col">
-    <div class="flex justify-between items-center mb-8 bg-gray-900 text-white p-4 rounded shadow">
-        <h1 class="text-2xl font-bold">🍔 Editor Menu e Categorie</h1>
+    <div id="main-header" class="flex justify-between items-center mb-8 bg-gray-900 text-white p-4 rounded shadow">
+        <h1 class="header-title">🍔 Editor Menu e Categorie</h1>
         <div class="flex space-x-4">
-            <button onclick="exportMenu()" class="bg-yellow-500 hover:bg-yellow-400 px-4 py-2 rounded font-bold text-gray-900">Esporta Menù</button>
-            <button onclick="openImportModal()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded font-bold text-white">Importa Menù</button>
-            <a href="/" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded font-bold text-white no-underline text-center">Torna al POS</a>
+            <button onclick="exportMenu()" class="bg-yellow-500 hover:bg-yellow-400 px-4 py-2 rounded header-btn text-gray-900">Esporta Menù</button>
+            <button onclick="openImportModal()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded header-btn text-white">Importa Menù</button>
+            <a href="/" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded header-btn text-white no-underline text-center">Torna al POS</a>
         </div>
     </div>
     
     <div class="flex gap-8 flex-grow overflow-hidden">
         <!-- Categories Column -->
-        <div class="w-1/3 bg-white p-6 rounded shadow flex flex-col">
-            <h2 class="text-xl font-bold mb-4 border-b pb-2">Categorie</h2>
+        <div id="category-panel" class="bg-white p-6 rounded shadow flex flex-col">
+            <h2 class="editor-section-title mb-4 border-b pb-2">Categorie</h2>
             <div id="cat-list" class="flex-grow overflow-y-auto space-y-2 mb-4"></div>
             <div class="border-t pt-4">
                 <input type="text" id="new-cat-name" placeholder="Nome Nuova Categoria" class="w-full border p-2 rounded mb-2">
@@ -27,12 +27,12 @@
         </div>
         
         <!-- Menu Items Column -->
-        <div class="w-2/3 bg-white p-6 rounded shadow flex flex-col">
-            <h2 class="text-xl font-bold mb-4 border-b pb-2">Articoli Menu</h2>
+        <div id="menu-editor-panel" class="bg-white p-6 rounded shadow flex flex-col">
+            <h2 class="editor-section-title mb-4 border-b pb-2">Articoli Menu</h2>
             <div id="menu-list" class="flex-grow overflow-y-auto gap-4 mb-4 grid grid-cols-2 content-start"></div>
             
             <div class="border-t pt-4 bg-gray-50 p-4 rounded border mt-4">
-                <h3 class="font-bold mb-2">Aggiungi / Modifica Articolo</h3>
+                <h3 class="editor-section-title mb-2">Aggiungi / Modifica Articolo</h3>
                 <input type="hidden" id="edit-item-id">
                 
                 <div class="flex space-x-4 mb-4 bg-white p-2 border rounded items-center">
@@ -49,19 +49,19 @@
 
                 <div class="grid grid-cols-4 gap-4 mb-2">
                     <div class="col-span-3">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Descrizione Articolo</label>
+                        <label class="block editor-input-label text-gray-500 mb-1">Descrizione Articolo</label>
                         <input type="text" id="item-desc" placeholder="es. Panino Bacon" class="w-full border p-2 rounded">
                     </div>
                     <div class="col-span-1">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Prezzo (€)</label>
+                        <label class="block editor-input-label text-gray-500 mb-1">Prezzo (€)</label>
                         <input type="number" id="item-price" placeholder="10.50" step="0.50" class="w-full border p-2 rounded">
                     </div>
                     <div class="col-span-2">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Immagine (URL)</label>
+                        <label class="block editor-input-label text-gray-500 mb-1">Immagine (URL)</label>
                         <input type="text" id="item-img" placeholder="/static/logo.png" class="w-full border p-2 rounded">
                     </div>
                     <div class="col-span-2">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Categoria Menu</label>
+                        <label class="block editor-input-label text-gray-500 mb-1">Categoria Menu</label>
                         <select id="item-cat" class="w-full border p-2 rounded bg-white">
                             <option value="">-- Seleziona Categoria --</option>
                         </select>
@@ -71,11 +71,11 @@
                 <div id="single-config" class="mb-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Componenti Base (es. Carne:1.50, Formaggio:0.50)</label>
+                            <label class="block editor-input-label text-gray-500 mb-1">Componenti Base (es. Carne:1.50, Formaggio:0.50)</label>
                             <input type="text" id="item-comp" placeholder="es. Carne:1.50, Pancetta:1.00, Formaggio" class="w-full border p-2 rounded text-sm">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Aggiunte Opzionali (es. Uovo:1.00, Funghi:1.50)</label>
+                            <label class="block editor-input-label text-gray-500 mb-1">Aggiunte Opzionali (es. Uovo:1.00, Funghi:1.50)</label>
                             <input type="text" id="item-additions" placeholder="es. Uovo:1.00, Maionese" class="w-full border p-2 rounded text-sm">
                         </div>
                     </div>
@@ -101,7 +101,7 @@
     <!-- Import Modal -->
     <div id="import-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-6 rounded shadow-lg w-1/3">
-            <h2 class="text-xl font-bold mb-4">Importa Menù</h2>
+            <h2 class="modal-title mb-4">Importa Menù</h2>
             <p class="text-sm text-gray-600 mb-4 bg-yellow-100 p-2 border-l-4 border-yellow-500">
                 L'importazione in modalità "Sostituisci" eliminerà tutto il menù attuale.
             </p>
@@ -149,7 +149,7 @@
             categories.forEach(c => {
                 list.innerHTML += `
                     <div class="flex justify-between items-center p-2 bg-gray-50 border rounded">
-                        <span class="font-bold capitalize">${c.name}</span>
+                        <span class="editor-item-title capitalize">${c.name}</span>
                         <button onclick="deleteCategory(${c.id})" class="text-red-500 font-bold px-2 py-1 bg-red-100 rounded hover:bg-red-200">X</button>
                     </div>
                 `;
@@ -194,9 +194,9 @@
                     <div class="border p-2 rounded flex items-center bg-gray-50 hover:bg-gray-100 cursor-pointer" onclick='editItem(${JSON.stringify(item).replace(/"/g, "&quot;")})'>
                         <img src="${item.image_url}" class="w-16 h-16 object-cover rounded mr-4">
                         <div class="flex-grow">
-                            <div class="font-bold">${item.description}</div>
-                            <div class="text-sm text-gray-500">Cat: ${item.category}</div>
-                            <div class="text-sm font-mono text-green-600">€${item.price.toFixed(2)}</div>
+                            <div class="editor-item-title">${item.description}</div>
+                            <div class="editor-item-subtitle text-gray-500">Cat: ${item.category}</div>
+                            <div class="editor-item-subtitle font-mono text-green-600">€${item.price.toFixed(2)}</div>
                         </div>
                         <button onclick="deleteItem(${item.id}, event)" class="text-red-500 font-bold px-3 py-2 bg-red-100 rounded hover:bg-red-200 ml-2">X</button>
                     </div>

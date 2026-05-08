@@ -58,6 +58,8 @@ class Order(Base):
     total = Column(Float)
     discount = Column(Float)
     payment_method = Column(String)
+    payment_status = Column(Boolean, default=False)
+    payment_datetime = Column(DateTime, nullable=True)
     takeaway = Column(Boolean)
     table_number = Column(String)
     user_id = Column(Integer, ForeignKey('users.id'))
@@ -106,6 +108,10 @@ if "orders" in inspector.get_table_names():
         if "order_number" not in order_columns:
             conn.execute(text("ALTER TABLE orders ADD COLUMN order_number VARCHAR DEFAULT ''"))
             conn.execute(text("UPDATE orders SET order_number = CAST(id AS VARCHAR) WHERE order_number = ''"))
+        if "payment_status" not in order_columns:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN payment_status BOOLEAN DEFAULT 1"))
+        if "payment_datetime" not in order_columns:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN payment_datetime DATETIME"))
 
 
 
@@ -246,12 +252,120 @@ def print_to_escpos(order_id: int, payload: dict):
         now = datetime.datetime.now()
         p.text(f"\n{now.strftime('%d-%m-%Y  %H:%M')}\n")
         p.text(f"DOCUMENTO N. {order_id:03d}\n")
+
+        payment_status = payload.get('payment_status', True)
+        payment_method = payload.get('payment_method', '')
+
+        p.text("\n")
+        if payment_status:
+            p.set(align="center", bold=True, double_height=True)
+            p.text("PAGATO\n")
+            p.set(normal_textsize=True)
+            if payment_method:
+                p.text(f"Metodo: {payment_method}\n")
+        else:
+            p.set(align="center", bold=True, double_height=True)
+            p.text("NON PAGATO\n")
+            p.set(normal_textsize=True)
+
         p.text("\nSCONTRINO NON FISCALE\n\n")
         
         p.cut()
         p.close()
     except Exception as e:
         print(f"Error printing bill: {e}")
+
+def print_kitchen_receipt(order_id: int, payload: dict):
+    db = SessionLocal()
+    settings = db.query(SystemSettings).first()
+    db.close()
+
+    printer_ip = settings.kitchen_printer_ip if settings and settings.kitchen_printer_ip else "10.0.0.200"
+    port = 9100
+
+    try:
+        p = Network(printer_ip, port, profile="KR-306")
+        p._raw(b'\x1b\x74\x13') # CP 858
+
+        p.set(align="center", bold=True, double_height=True, double_width=True)
+        p.text(f"ORDINE {order_id:03d}\n")
+        p.set(align="center", normal_textsize=True)
+        now = datetime.datetime.now()
+        p.text(f"{now.strftime('%d-%m-%Y %H:%M')}\n")
+        p.text("-" * 48 + "\n")
+
+        takeaway = payload.get('takeaway', False)
+        table = payload.get('table_number', 'Nessuno')
+        if takeaway:
+            p.set(align="center", bold=True, double_height=True)
+            p.text(">>> ASPORTO <<<\n")
+            p.set(normal_textsize=True)
+        elif table and table.lower() != 'nessuno':
+            p.set(align="center", bold=True, double_height=True)
+            p.text(f"TAVOLO {table}\n")
+            p.set(normal_textsize=True)
+
+        p.text("-" * 48 + "\n")
+        p.set(align="left")
+
+        # Group similar items
+        grouped_items = []
+        for item in payload.get('items', []):
+            desc = item.get('description', '')
+            combo_choices = item.get('combo_choices', '')
+            notes = item.get('notes', '')
+            ingredients = item.get('ingredients', '')
+
+            is_groupable = not combo_choices and not notes and not ingredients
+
+            if is_groupable:
+                found = False
+                for g in grouped_items:
+                    if g['groupable'] and g['description'] == desc:
+                        g['qty'] += 1
+                        found = True
+                        break
+                if not found:
+                    grouped_items.append({
+                        'groupable': True, 'description': desc,
+                        'qty': 1, 'combo_choices': '', 'notes': '', 'ingredients': ''
+                    })
+            else:
+                grouped_items.append({
+                    'groupable': False, 'description': desc,
+                    'qty': 1, 'combo_choices': combo_choices, 'notes': notes, 'ingredients': ingredients
+                })
+
+        for item in grouped_items:
+            desc = item['description']
+            qty = item['qty']
+            p.set(bold=True, double_height=True)
+            p.text(f"{qty}x {desc}\n")
+            p.set(normal_textsize=True, bold=False)
+
+            if item['combo_choices']:
+                for sub in item['combo_choices'].split(','):
+                    sub_clean = sub.strip()
+                    if sub_clean:
+                        p.text("  - " + sub_clean + "\n")
+            if item['ingredients']:
+                p.text("  [Ingr: " + item['ingredients'] + "]\n")
+            if item['notes']:
+                p.text("  *Nota: " + item['notes'] + "\n")
+
+        p.text("-" * 48 + "\n")
+        notes = payload.get('notes', '')
+        if notes:
+            p.set(bold=True)
+            p.text("NOTE ORDINE:\n")
+            p.set(bold=False)
+            p.text(notes + "\n")
+            p.text("-" * 48 + "\n")
+
+        p.cut()
+        p.close()
+    except Exception as e:
+        print(f"Error printing kitchen receipt: {e}")
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -427,12 +541,18 @@ def create_order(payload: dict = Body(...)):
             'total': payload['total'],
             'discount': payload['discount'],
             'payment_method': payload['payment_method'],
+            'payment_status': payload.get('payment_status', True),
             'takeaway': payload['takeaway'],
             'table_number': payload['table_number'],
             'user_id': payload['user_id'],
             'notes': payload.get('notes', '')
         }
         
+        if kwargs['payment_status']:
+            kwargs['payment_datetime'] = datetime.datetime.utcnow()
+        else:
+            kwargs['payment_datetime'] = None
+
         settings = db.query(SystemSettings).first()
         if not settings:
             settings = SystemSettings(id=1, auto_print=True, next_order_number=1)
@@ -440,19 +560,45 @@ def create_order(payload: dict = Body(...)):
             db.flush()
 
         custom_id = payload.get('order_id')
+
+        existing_order = None
         if custom_id:
-            kwargs['order_number'] = str(custom_id)
-        else:
-            kwargs['order_number'] = str(settings.next_order_number)
-            settings.next_order_number += 1
+            existing_order = db.query(Order).filter(Order.order_number == str(custom_id)).first()
+
+        if existing_order:
+            existing_order.total = kwargs['total']
+            existing_order.discount = kwargs['discount']
+            existing_order.payment_method = kwargs['payment_method']
+            existing_order.payment_status = kwargs['payment_status']
+            existing_order.payment_datetime = kwargs['payment_datetime']
+            existing_order.takeaway = kwargs['takeaway']
+            existing_order.table_number = kwargs['table_number']
+            existing_order.user_id = kwargs['user_id']
+            existing_order.notes = kwargs['notes']
             
-        new_order = Order(**kwargs)
-        db.add(new_order)
-        db.flush()
+            # Remove old items and replace
+            db.query(OrderItem).filter(OrderItem.order_id == existing_order.id).delete()
+
+            order_id_to_use = existing_order.id
+            order_number_str = existing_order.order_number
+            is_new_order = False
+        else:
+            if custom_id:
+                kwargs['order_number'] = str(custom_id)
+            else:
+                kwargs['order_number'] = str(settings.next_order_number)
+                settings.next_order_number += 1
+
+            new_order = Order(**kwargs)
+            db.add(new_order)
+            db.flush()
+            order_id_to_use = new_order.id
+            order_number_str = new_order.order_number
+            is_new_order = True
 
         for item in payload['items']:
             order_item = OrderItem(
-                order_id=new_order.id,
+                order_id=order_id_to_use,
                 description=item['description'],
                 quantity=1,
                 price_at_sale=item['price'],
@@ -463,11 +609,15 @@ def create_order(payload: dict = Body(...)):
             db.add(order_item)
         
         db.commit()
-        order_number_str = new_order.order_number
         
         auto_print_enabled = settings.auto_print if settings else True
         if auto_print_enabled:
-            print_to_escpos(order_number_str, payload)
+            # We always print the receipt for the customer
+            print_to_escpos(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, payload)
+
+            # Print to kitchen only if it is a new order
+            if is_new_order:
+                print_kitchen_receipt(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, payload)
         
         return {"status": "success", "order_id": order_number_str, "auto_print": auto_print_enabled}
     except Exception as e:
@@ -483,7 +633,19 @@ def get_orders():
     res = []
     for o in orders:
         items = [{"description": i.description, "price_at_sale": i.price_at_sale, "notes": i.notes, "ingredients": i.ingredients, "combo_choices": i.combo_choices or ""} for i in o.items]
-        res.append({"id": o.order_number or str(o.id), "total": o.total, "discount": o.discount, "timestamp": o.timestamp, "items": items, "takeaway": o.takeaway, "table_number": o.table_number, "notes": o.notes})
+        res.append({
+            "id": o.order_number or str(o.id),
+            "total": o.total,
+            "discount": o.discount,
+            "timestamp": o.timestamp,
+            "payment_method": o.payment_method,
+            "payment_status": o.payment_status,
+            "payment_datetime": o.payment_datetime,
+            "items": items,
+            "takeaway": o.takeaway,
+            "table_number": o.table_number,
+            "notes": o.notes
+        })
     db.close()
     return res
 

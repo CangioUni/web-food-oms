@@ -51,13 +51,7 @@
                     <span>Totale:</span>
                     <span id="cart-total">€0.00</span>
                 </div>
-                <div class="grid grid-cols-2 gap-2 mt-4">
-                    <button id="btn-pay-cash" onclick="selectPayment('Cash')"
-                        class="bg-green-600 text-white py-3 rounded font-bold border-4 border-yellow-400">CONTANTI</button>
-                    <button id="btn-pay-satispay" onclick="selectPayment('Satispay')"
-                        class="bg-blue-500 text-white py-3 rounded font-bold border-4 border-transparent">SATISPAY</button>
-                </div>
-                <button onclick="checkout()"
+                <button onclick="openPaymentModal()"
                     class="w-full bg-red-600 hover:bg-red-500 text-white py-4 rounded font-black text-2xl mt-4">INVIA
                     ORDINE</button>
             </div>
@@ -312,6 +306,30 @@
         </div>
     </div>
 
+    <!-- Payment Modal -->
+    <div id="payment-modal"
+        class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
+        <div class="bg-gray-800 p-8 rounded-lg w-1/3 min-w-[400px]">
+            <h2 class="text-3xl font-bold mb-4 border-b border-gray-600 pb-2">Metodo di Pagamento</h2>
+
+            <div class="grid grid-cols-2 gap-4 mb-8 mt-4">
+                <button id="btn-pay-cash" onclick="selectPayment('Cash')"
+                    class="bg-green-600 text-white py-6 rounded font-bold text-2xl border-4 border-yellow-400 shadow-lg">CONTANTI</button>
+                <button id="btn-pay-satispay" onclick="selectPayment('Satispay')"
+                    class="bg-blue-500 text-white py-6 rounded font-bold text-2xl border-4 border-transparent shadow-lg">SATISPAY</button>
+            </div>
+
+            <div class="flex justify-between space-x-4 border-t border-gray-600 pt-6">
+                <button onclick="closePaymentModal()"
+                    class="bg-gray-600 px-4 py-4 rounded text-xl font-bold w-1/4">Annulla</button>
+                <button onclick="checkout(false)"
+                    class="bg-orange-500 hover:bg-orange-400 px-4 py-4 rounded text-xl font-bold w-1/3 shadow">Paga Dopo</button>
+                <button onclick="checkout(true)"
+                    class="bg-green-600 hover:bg-green-500 px-4 py-4 rounded text-xl font-bold flex-grow shadow">Conferma Pagamento</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Varie Modal -->
     <div id="varie-modal"
         class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
@@ -386,6 +404,12 @@
 
             if (categoriesData.length > 0) setCategory(categoriesData[0].name);
             initSortable();
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const loadOrderId = urlParams.get('load_order');
+            if (loadOrderId) {
+                await loadSpecificOrder(loadOrderId);
+            }
         }
 
         async function loadRemoteState() {
@@ -460,6 +484,15 @@
             });
         }
 
+        function openPaymentModal() {
+            if (cart.length === 0) return alert("Il carrello è vuoto");
+            document.getElementById('payment-modal').classList.remove('hidden');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('payment-modal').classList.add('hidden');
+        }
+
         function selectPayment(method) {
             state.payment_method = method;
             if (method === 'Cash') {
@@ -469,7 +502,90 @@
                 document.getElementById('btn-pay-satispay').classList.replace('border-transparent', 'border-yellow-400');
                 document.getElementById('btn-pay-cash').classList.replace('border-yellow-400', 'border-transparent');
             }
-            render();
+        }
+
+        async function loadSpecificOrder(orderId) {
+            if (cart.length > 0) {
+                if (!confirm("Hai un ordine in corso. Vuoi sovrascriverlo con l'ordine selezionato?")) {
+                    return;
+                }
+            }
+
+            try {
+                const resp = await fetch('/orders');
+                const orders = await resp.json();
+                const order = orders.find(o => o.id === orderId);
+
+                if (order) {
+                    cart = order.items.map((i, idx) => {
+                        let parsedIngredients = [];
+                        if (i.ingredients) {
+                            parsedIngredients = i.ingredients.split(',').map(ing => {
+                                ing = ing.trim();
+                                let qty = 1;
+                                let type = 'base';
+                                let name = ing;
+
+                                if (ing.startsWith('Senza ')) { qty = 0; name = ing.replace('Senza ', ''); }
+                                else if (ing.startsWith('Doppio ')) { qty = 2; name = ing.replace('Doppio ', ''); }
+                                else if (ing.startsWith('Triplo ')) { qty = 3; name = ing.replace('Triplo ', ''); }
+                                else if (ing.match(/^\dx /)) {
+                                    qty = parseInt(ing[0]);
+                                    name = ing.substring(3);
+                                }
+                                else if (ing.startsWith('Con ')) {
+                                    qty = 1;
+                                    type = 'addition';
+                                    name = ing.replace('Con ', '');
+                                }
+
+                                return { name: name, type: type, qty: qty, price: 0 };
+                            });
+                        }
+
+                        return {
+                            description: i.description,
+                            price: i.price_at_sale,
+                            current_price: i.price_at_sale,
+                            notes: i.notes || '',
+                            combo_choices: i.combo_choices ? i.combo_choices.split(',').filter(c => c.trim() !== '') : [],
+                            ingredients: parsedIngredients,
+                            cart_id: Date.now().toString() + idx.toString()
+                        };
+                    });
+
+                    state.table = order.table_number || "Nessuno";
+                    state.takeaway = order.takeaway || false;
+                    state.discount = order.discount || 0;
+                    state.discount_type = '€';
+                    state.orderNotes = order.notes || '';
+                    state.payment_method = order.payment_method || 'Cash';
+
+                    document.getElementById('custom-order-id').value = order.id;
+
+                    selectPayment(state.payment_method);
+
+                    document.getElementById('lbl-table').innerText = state.table;
+                    const btnTake = document.getElementById('btn-takeaway');
+                    const lblAsporto = document.getElementById('lbl-asporto');
+                    if (state.takeaway) {
+                        btnTake.classList.add('bg-orange-600', 'border-orange-500');
+                        btnTake.classList.remove('bg-gray-600', 'border-gray-500');
+                        lblAsporto.innerText = "SI";
+                    } else {
+                        btnTake.classList.add('bg-gray-600', 'border-gray-500');
+                        btnTake.classList.remove('bg-orange-600', 'border-orange-500');
+                        lblAsporto.innerText = "NO";
+                    }
+
+                    render(true);
+                } else {
+                    alert("Ordine non trovato");
+                }
+            } catch (e) {
+                console.error("Error loading order", e);
+                alert("Errore nel caricamento dell'ordine");
+            }
         }
 
         function setCategory(cat) {
@@ -694,10 +810,11 @@
             render();
         }
 
-        async function checkout() {
+        async function checkout(isPaid) {
+            closePaymentModal();
             if (cart.length === 0) return alert("Il carrello è vuoto");
 
-            const method = state.payment_method || 'Cash';
+            const method = isPaid ? (state.payment_method || 'Cash') : '';
 
             const mappedCart = cart.map(item => {
                 let ingLabels = [];
@@ -731,6 +848,7 @@
                 total: render(),
                 discount: state.discount || 0,
                 payment_method: method,
+                payment_status: isPaid,
                 takeaway: state.takeaway,
                 table_number: state.table,
                 user_id: state.user_id,

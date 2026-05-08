@@ -1,0 +1,161 @@
+{
+  "categories": [
+    {
+      "name": "menu"
+    },
+    {
+      "name": "panini"
+    },
+    {
+      "name": "contorni"
+    },
+    {
+      "name": "bibite"
+    },
+    {
+      "name": "dolci"
+    }
+  ],
+  "items": [
+    {
+      "description": "Panino Classico",
+      "price": 9,
+      "image_url": "/static/images/burger_classico.png",
+      "category": "panini",
+      "components": "Pane,Hamburger,Pomodoro,Insalata",
+      "additions": "",
+      "is_combo": false,
+      "combo_items": "[]"
+    },
+    {
+      "description": "Panino Sportivo",
+      "price": 9,
+      "image_url": "/static/images/burger_sportivo.png",
+      "category": "panini",
+      "components": "Pane,Cotoletta,Pomodoro,Insalata",
+      "additions": "",
+      "is_combo": false,
+      "combo_items": "[]"
+    },
+    {
+      "description": "Panino Leggero",
+      "price": 7,
+      "image_url": "https://placehold.co/400x300?text=Panino+Leggero",
+      "category": "panini",
+      "components": "Pane,Hamburger Vegetale,Pomodoro,Insalata",
+      "additions": "",
+      "is_combo": false,
+      "combo_items": "[]"
+    },
+    {
+      "description": "Menu Classico",
+      "price": 14,
+      "image_url": "https://placehold.co/400x300?text=Menu+Classico",
+      "category": "menu",
+      "components": "",
+      "additions": "",
+      "is_combo": true,
+      "combo_items": "[[\"Panino Classico\"], [\"Patatine\"], [\"Coca Cola\", \"Birra\", \"Acqua\"]]"
+    },
+    {
+      "description": "Menu Sportivo",
+      "price": 14,
+      "image_url": "/static/images/menu_sportivo.png",
+      "category": "menu",
+      "components": "",
+      "additions": "",
+      "is_combo": true,
+      "combo_items": "[[\"Panino Sportivo\"],[\"Patatine\"],[\"Acqua\",\"Coca Cola\",\"Birra\"]]"
+    },
+    {
+      "description": "Menu Leggero",
+      "price": 12,
+      "image_url": "https://placehold.co/400x300?text=Menu+Supereroe",
+      "category": "menu",
+      "components": "",
+      "additions": "",
+      "is_combo": true,
+      "combo_items": "[[\"Panino Leggero\"], [\"Patatine\"], [\"Coca Cola\", \"Birra\", \"Acqua\"]]"
+    },
+    {
+      "description": "Patatine",
+      "price": 4,
+      "image_url": "/static/images/patatine.png",
+      "category": "contorni",
+      "components": "",
+      "additions": "",
+      "is_combo": false,
+      "combo_items": "[]"
+    },
+    {
+      "description": "Acqua Nat",
+      "price": 1,
+      "image_url": "/static/images/acqua_nat.png",
+      "category": "bibite",
+      "components": "",
+      "additions": "",
+      "is_combo": false,
+      "combo_items": "[]"
+    },
+    {
+      "description": "Acqua Gas",
+      "price": 1,
+      "image_url": "/static/images/acqua_gas.png",
+      "category": "bibite",
+      "components": "",
+      "additions": "",
+      "is_combo": false,
+      "combo_items": "[]"
+    },
+    {
+      "description": "Coca Cola",
+      "price": 3,
+      "image_url": "/static/images/cola.png",
+      "category": "bibite",
+      "components": "",
+      "additions": "",
+      "is_combo": false,
+      "combo_items": "[]"
+    },
+    {
+      "description": "Birra",
+      "price": 4,
+      "image_url": "/static/images/birra.png",
+      "category": "bibite",
+      "components": "",
+      "additions": "",
+      "is_combo": false,
+      "combo_items": "[]"
+    },
+    {
+      "description": "Donut",
+      "price": 5,
+      "image_url": "/static/images/donut.png",
+      "category": "dolci",
+      "components": "",
+      "additions": "",
+      "is_combo": false,
+      "combo_items": "[]"
+    },
+    {
+      "description": "Panino Croccante",
+      "price": 10,
+      "image_url": "/static/images/burger_croccante.png",
+      "category": "panini",
+      "components": "pane,hamburger,bacon,salsa cheddar,cipolla crispy",
+      "additions": "insalata,pomodoro",
+      "is_combo": false,
+      "combo_items": "[]"
+    },
+    {
+      "description": "Menu Croccante",
+      "price": 15,
+      "image_url": "/static/images/menu_croccante.png",
+      "category": "menu",
+      "components": "",
+      "additions": "",
+      "is_combo": true,
+      "combo_items": "[[\"panino croccante\"],[\"patatine\"],[\"acqua\",\"coca cola\",\"birra\"]]"
+    }
+  ]
+}

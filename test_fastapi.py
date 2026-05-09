@@ -6,7 +6,7 @@ import sys
 from unittest.mock import MagicMock
 sys.modules['escpos'] = MagicMock()
 sys.modules['escpos.printer'] = MagicMock()
-sys.modules['PIL'] = MagicMock()
+
 
 try:
     from main import app

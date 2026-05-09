@@ -763,6 +763,53 @@ def delete_all_orders():
         db.close()
     return {"status": "success"}
 
+from stats_exporter import StatsExporter
+
+@app.get("/api/stats/days")
+def get_stats_days():
+    exporter = StatsExporter(session_factory=SessionLocal)
+    days = exporter.get_available_days()
+    return {"days": days}
+
+@app.get("/api/stats/data")
+def get_stats_data(day: str):
+    exporter = StatsExporter(session_factory=SessionLocal)
+    stats = exporter.generate_stats(day)
+    return stats
+
+@app.post("/api/stats/export/excel")
+def export_stats_excel(payload: dict = Body(...)):
+    day = payload.get('day')
+    if not day:
+        raise HTTPException(status_code=400, detail="Day is required")
+
+    exporter = StatsExporter(session_factory=SessionLocal)
+    stats = exporter.generate_stats(day)
+
+    import os
+    os.makedirs("static/export", exist_ok=True)
+    excel_path = f"static/export/stats_{day}.xlsx"
+    exporter.export_to_excel(stats, excel_path)
+
+    return {"status": "success", "url": f"/{excel_path}"}
+
+@app.post("/api/stats/export/pdf")
+def export_stats_pdf(payload: dict = Body(...)):
+    day = payload.get('day')
+    if not day:
+        raise HTTPException(status_code=400, detail="Day is required")
+
+    exporter = StatsExporter(session_factory=SessionLocal)
+    stats = exporter.generate_stats(day)
+
+    import os
+    os.makedirs("static/export", exist_ok=True)
+    pdf_path = f"static/export/stats_{day}.pdf"
+    exporter.export_to_pdf(stats, pdf_path)
+
+    return {"status": "success", "url": f"/{pdf_path}"}
+
+
 @app.get("/export/orders")
 def export_orders():
     db = SessionLocal()

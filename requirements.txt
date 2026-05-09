@@ -5,3 +5,6 @@ pydantic
 fpdf2
 python-escpos
 Pillow
+pandas
+matplotlib
+openpyxl

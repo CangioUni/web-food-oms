@@ -1,99 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Editor Menu</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gray-100 p-8 h-screen flex flex-col">
     <div id="main-header" class="flex justify-between items-center mb-8 bg-gray-900 text-white p-4 rounded shadow">
         <h1 class="header-title">🍔 Editor Menu e Categorie</h1>
         <div class="flex space-x-4">
-            <button onclick="exportMenu()" class="bg-yellow-500 hover:bg-yellow-400 px-4 py-2 rounded header-btn text-gray-900">Esporta Menù</button>
-            <button onclick="openImportModal()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded header-btn text-white">Importa Menù</button>
-            <a href="/" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded header-btn text-white no-underline text-center">Torna al POS</a>
+            <button onclick="exportMenu()"
+                class="bg-yellow-500 hover:bg-yellow-400 px-4 py-2 rounded header-btn text-gray-900">Esporta
+                Menù</button>
+            <button onclick="openImportModal()"
+                class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded header-btn text-white">Importa Menù</button>
+            <a href="/"
+                class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded header-btn text-white no-underline text-center">Torna
+                al POS</a>
         </div>
     </div>
-    
+
     <div class="flex gap-8 flex-grow overflow-hidden">
         <!-- Categories Column -->
         <div id="category-panel" class="bg-white p-6 rounded shadow flex flex-col">
             <h2 class="editor-section-title mb-4 border-b pb-2">Categorie</h2>
             <div id="cat-list" class="flex-grow overflow-y-auto space-y-2 mb-4"></div>
             <div class="border-t pt-4">
-                <input type="text" id="new-cat-name" placeholder="Nome Nuova Categoria" class="w-full border p-2 rounded mb-2">
-                <button onclick="addCategory()" class="w-full bg-green-600 text-white font-bold py-2 rounded hover:bg-green-500">Aggiungi Categoria</button>
+                <input type="text" id="new-cat-name" placeholder="Nome Nuova Categoria"
+                    class="w-full border p-2 rounded mb-2">
+                <button onclick="addCategory()"
+                    class="w-full bg-green-600 text-white font-bold py-2 rounded hover:bg-green-500">Aggiungi
+                    Categoria</button>
             </div>
         </div>
-        
+
         <!-- Menu Items Column -->
         <div id="menu-editor-panel" class="bg-white p-6 rounded shadow flex flex-col">
-            <h2 class="editor-section-title mb-4 border-b pb-2">Articoli Menu</h2>
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h2 class="editor-section-title">Articoli Menu</h2>
+                <button onclick="openItemEditorModal()"
+                    class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded font-bold text-white shadow">+ Aggiungi
+                    Articolo</button>
+            </div>
             <div id="menu-list" class="flex-grow overflow-y-auto gap-4 mb-4 grid grid-cols-2 content-start"></div>
-            
-            <div class="border-t pt-4 bg-gray-50 p-4 rounded border mt-4">
-                <h3 class="editor-section-title mb-2">Aggiungi / Modifica Articolo</h3>
-                <input type="hidden" id="edit-item-id">
-                
-                <div class="flex space-x-4 mb-4 bg-white p-2 border rounded items-center">
-                    <span class="font-bold text-sm text-gray-700">Tipo:</span>
-                    <label class="flex items-center space-x-1 cursor-pointer">
-                        <input type="radio" name="item_type" id="type-single" value="single" checked onchange="toggleItemType()">
-                        <span>Articolo Singolo</span>
-                    </label>
-                    <label class="flex items-center space-x-1 cursor-pointer">
-                        <input type="radio" name="item_type" id="type-combo" value="combo" onchange="toggleItemType()">
-                        <span>Menù (Combo)</span>
-                    </label>
-                </div>
+        </div>
+    </div>
 
-                <div class="grid grid-cols-4 gap-4 mb-2">
-                    <div class="col-span-3">
-                        <label class="block editor-input-label text-gray-500 mb-1">Descrizione Articolo</label>
-                        <input type="text" id="item-desc" placeholder="es. Panino Bacon" class="w-full border p-2 rounded">
-                    </div>
-                    <div class="col-span-1">
-                        <label class="block editor-input-label text-gray-500 mb-1">Prezzo (€)</label>
-                        <input type="number" id="item-price" placeholder="10.50" step="0.50" class="w-full border p-2 rounded">
-                    </div>
-                    <div class="col-span-2">
-                        <label class="block editor-input-label text-gray-500 mb-1">Immagine (URL)</label>
-                        <input type="text" id="item-img" placeholder="/static/logo.png" class="w-full border p-2 rounded">
-                    </div>
-                    <div class="col-span-2">
-                        <label class="block editor-input-label text-gray-500 mb-1">Categoria Menu</label>
-                        <select id="item-cat" class="w-full border p-2 rounded bg-white">
-                            <option value="">-- Seleziona Categoria --</option>
-                        </select>
-                    </div>
-                </div>
+    <!-- Item Editor Modal -->
+    <div id="item-editor-modal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded shadow-lg w-2/3 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="editor-section-title text-xl font-bold text-gray-800">Aggiungi / Modifica Articolo</h3>
+                <button onclick="closeItemEditorModal()"
+                    class="text-gray-500 hover:text-red-500 font-bold text-2xl">&times;</button>
+            </div>
+            <input type="hidden" id="edit-item-id">
 
-                <div id="single-config" class="mb-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block editor-input-label text-gray-500 mb-1">Componenti Base (es. Carne:1.50, Formaggio:0.50)</label>
-                            <input type="text" id="item-comp" placeholder="es. Carne:1.50, Pancetta:1.00, Formaggio" class="w-full border p-2 rounded text-sm">
-                        </div>
-                        <div>
-                            <label class="block editor-input-label text-gray-500 mb-1">Aggiunte Opzionali (es. Uovo:1.00, Funghi:1.50)</label>
-                            <input type="text" id="item-additions" placeholder="es. Uovo:1.00, Maionese" class="w-full border p-2 rounded text-sm">
-                        </div>
-                    </div>
-                </div>
+            <div class="flex space-x-4 mb-4 bg-white p-2 border rounded items-center">
+                <span class="font-bold text-sm text-gray-700">Tipo:</span>
+                <label class="flex items-center space-x-1 cursor-pointer">
+                    <input type="radio" name="item_type" id="type-single" value="single" checked
+                        onchange="toggleItemType()">
+                    <span>Articolo Singolo</span>
+                </label>
+                <label class="flex items-center space-x-1 cursor-pointer">
+                    <input type="radio" name="item_type" id="type-combo" value="combo" onchange="toggleItemType()">
+                    <span>Menù (Combo)</span>
+                </label>
+            </div>
 
-                <div id="combo-config" class="mb-4 hidden border p-4 rounded bg-gray-100">
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-bold text-gray-700">Configurazione Slot Menù</label>
-                        <button onclick="addComboSlot()" class="bg-gray-300 px-2 py-1 rounded text-xs font-bold">+ Aggiungi Slot</button>
-                    </div>
-                    <div id="combo-slots-container" class="space-y-2">
-                    </div>
+            <div class="grid grid-cols-4 gap-4 mb-2">
+                <div class="col-span-3">
+                    <label class="block editor-input-label text-gray-500 mb-1">Descrizione Articolo</label>
+                    <input type="text" id="item-desc" placeholder="es. Panino Bacon" class="w-full border p-2 rounded">
                 </div>
+                <div class="col-span-1">
+                    <label class="block editor-input-label text-gray-500 mb-1">Prezzo (€)</label>
+                    <input type="number" id="item-price" placeholder="10.50" step="0.50"
+                        class="w-full border p-2 rounded">
+                </div>
+                <div class="col-span-2">
+                    <label class="block editor-input-label text-gray-500 mb-1">Immagine (URL)</label>
+                    <input type="text" id="item-img" placeholder="/static/logo.png" class="w-full border p-2 rounded">
+                </div>
+                <div class="col-span-2">
+                    <label class="block editor-input-label text-gray-500 mb-1">Categoria Menu</label>
+                    <select id="item-cat" class="w-full border p-2 rounded bg-white">
+                        <option value="">-- Seleziona Categoria --</option>
+                    </select>
+                </div>
+            </div>
 
-                <div class="flex space-x-2">
-                    <button onclick="saveItem()" class="flex-grow bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-500">Salva Articolo</button>
-                    <button onclick="clearItemForm()" class="bg-gray-400 text-white font-bold py-2 px-4 rounded hover:bg-gray-500">Pulisci</button>
+            <div id="single-config" class="mb-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block editor-input-label text-gray-500 mb-1">Componenti Base (es. Carne:1.50,
+                            Formaggio:0.50)</label>
+                        <input type="text" id="item-comp" placeholder="es. Carne:1.50, Pancetta:1.00, Formaggio"
+                            class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div>
+                        <label class="block editor-input-label text-gray-500 mb-1">Aggiunte Opzionali (es. Uovo:1.00,
+                            Funghi:1.50)</label>
+                        <input type="text" id="item-additions" placeholder="es. Uovo:1.00, Maionese"
+                            class="w-full border p-2 rounded text-sm">
+                    </div>
                 </div>
+            </div>
+
+            <div id="combo-config" class="mb-4 hidden border p-4 rounded bg-gray-100">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="block font-bold text-gray-700">Configurazione Slot Menù</label>
+                    <button onclick="addComboSlot()" class="bg-gray-300 px-2 py-1 rounded font-bold">+ Aggiungi
+                        Slot</button>
+                </div>
+                <div id="combo-slots-container" class="space-y-2">
+                </div>
+            </div>
+
+            <div class="flex space-x-2 mt-6 pt-4 border-t">
+                <button onclick="closeItemEditorModal()"
+                    class="bg-gray-400 text-white font-bold py-2 px-4 rounded hover:bg-gray-500">Annulla</button>
+                <button onclick="saveItem()"
+                    class="flex-grow bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-500">Salva
+                    Articolo</button>
             </div>
         </div>
     </div>
@@ -106,7 +139,7 @@
                 L'importazione in modalità "Sostituisci" eliminerà tutto il menù attuale.
             </p>
             <input type="file" id="import-file" accept=".json" class="mb-4">
-            
+
             <div class="mb-4 space-y-2">
                 <label class="flex items-center space-x-2">
                     <input type="radio" name="import_mode" value="replace" checked class="form-radio text-purple-600">
@@ -117,10 +150,12 @@
                     <span class="font-bold">Aggiungi agli elementi esistenti</span>
                 </label>
             </div>
-            
+
             <div class="flex justify-end space-x-2 mt-6">
-                <button onclick="closeImportModal()" class="px-4 py-2 bg-gray-300 rounded font-bold hover:bg-gray-400">Annulla</button>
-                <button onclick="performImport()" class="px-4 py-2 bg-purple-600 text-white rounded font-bold hover:bg-purple-700">Importa</button>
+                <button onclick="closeImportModal()"
+                    class="px-4 py-2 bg-gray-300 rounded font-bold hover:bg-gray-400">Annulla</button>
+                <button onclick="performImport()"
+                    class="px-4 py-2 bg-purple-600 text-white rounded font-bold hover:bg-purple-700">Importa</button>
             </div>
         </div>
     </div>
@@ -137,7 +172,7 @@
             const [cResp, mResp] = await Promise.all([fetch('/categories'), fetch('/menu')]);
             categories = await cResp.json();
             menuItems = await mResp.json();
-            
+
             renderCategories();
             renderMenuItems();
             updateCategoryDropdown();
@@ -169,8 +204,8 @@
             if (!name) return;
             const resp = await fetch('/categories', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name: name.toLowerCase()})
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name.toLowerCase() })
             });
             if (resp.ok) {
                 document.getElementById('new-cat-name').value = '';
@@ -206,7 +241,7 @@
 
         function toggleItemType() {
             const isCombo = document.getElementById('type-combo').checked;
-            if(isCombo) {
+            if (isCombo) {
                 document.getElementById('single-config').classList.add('hidden');
                 document.getElementById('combo-config').classList.remove('hidden');
             } else {
@@ -215,17 +250,45 @@
             }
         }
 
-        function addComboSlot(value = "") {
+        function addComboSlot(selectedIds = []) {
             const container = document.getElementById('combo-slots-container');
             const idx = container.children.length + 1;
             const div = document.createElement('div');
-            div.className = "flex space-x-2 items-center";
+            div.className = "border border-gray-300 p-2 rounded relative combo-slot-card bg-white";
+
+            const singleItems = menuItems.filter(i => !i.is_combo);
+            let checkboxesHtml = `<label class="flex items-center space-x-1 p-1 bg-yellow-50 rounded border">
+                <input type="checkbox" value="0" class="slot-item-cb" ${selectedIds.includes(0) ? 'checked' : ''}>
+                <span class="font-bold">Nessuna Scelta</span>
+            </label>`;
+
+            singleItems.forEach(i => {
+                const checked = selectedIds.includes(i.id) ? 'checked' : '';
+                checkboxesHtml += `<label class="flex items-center space-x-1 p-1 hover:bg-gray-50 rounded">
+                    <input type="checkbox" value="${i.id}" class="slot-item-cb" ${checked}>
+                    <span class="truncate" title="${i.description}">${i.description}</span>
+                </label>`;
+            });
+
             div.innerHTML = `
-                <span class="font-bold text-xs text-gray-500 w-12 flex-shrink-0">Slot ${idx}:</span>
-                <input type="text" value="${value}" class="combo-slot-input flex-grow border p-1 rounded text-sm" placeholder="es. Coca Cola,Birra">
-                <button onclick="this.parentElement.remove()" class="text-red-500 font-bold px-2 py-1 bg-white border rounded hover:bg-red-50">X</button>
+                <div class="flex justify-between items-center mb-2 border-b pb-1">
+                    <span class="font-bold text-gray-700">Slot ${idx}</span>
+                    <button onclick="this.closest('.combo-slot-card').remove()" class="text-red-500 font-bold px-2 py-1 bg-white border rounded hover:bg-red-50 text-xs">Rimuovi</button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-1 max-h-48 overflow-y-auto p-1 bg-gray-50 rounded border inner-shadow">
+                    ${checkboxesHtml}
+                </div>
             `;
             container.appendChild(div);
+        }
+
+        function openItemEditorModal() {
+            clearItemForm();
+            document.getElementById('item-editor-modal').classList.remove('hidden');
+        }
+
+        function closeItemEditorModal() {
+            document.getElementById('item-editor-modal').classList.add('hidden');
         }
 
         function editItem(item) {
@@ -236,19 +299,20 @@
             document.getElementById('item-cat').value = item.category;
             document.getElementById('item-comp').value = item.components || '';
             document.getElementById('item-additions').value = item.additions || '';
-            
+
             document.getElementById('combo-slots-container').innerHTML = '';
             if (item.is_combo) {
                 document.getElementById('type-combo').checked = true;
                 let parsedSlots = [];
-                try { parsedSlots = JSON.parse(item.combo_items); } catch(e){}
+                try { parsedSlots = JSON.parse(item.combo_items); } catch (e) { }
                 parsedSlots.forEach(slotArr => {
-                    addComboSlot(slotArr.join(','));
+                    addComboSlot(slotArr);
                 });
             } else {
                 document.getElementById('type-single').checked = true;
             }
             toggleItemType();
+            document.getElementById('item-editor-modal').classList.remove('hidden');
         }
 
         function clearItemForm() {
@@ -267,15 +331,14 @@
         async function saveItem() {
             const id = document.getElementById('edit-item-id').value;
             const isCombo = document.getElementById('type-combo').checked;
-            
+
             let comboArr = [];
-            if(isCombo) {
-                const inputs = document.querySelectorAll('.combo-slot-input');
-                inputs.forEach(inp => {
-                    const str = inp.value.trim();
-                    if(str) {
-                        const arr = str.split(',').map(s => s.trim()).filter(s => s);
-                        comboArr.push(arr);
+            if (isCombo) {
+                const slots = document.querySelectorAll('.combo-slot-card');
+                slots.forEach(slot => {
+                    const checked = Array.from(slot.querySelectorAll('.slot-item-cb:checked')).map(cb => parseInt(cb.value));
+                    if (checked.length > 0) {
+                        comboArr.push(checked);
                     }
                 });
             }
@@ -290,7 +353,7 @@
                 is_combo: isCombo,
                 combo_items: JSON.stringify(comboArr)
             };
-            
+
             if (!payload.description || !payload.category) return alert("Descrizione e Categoria obbligatori.");
 
             let url = '/menu';
@@ -302,12 +365,12 @@
 
             const resp = await fetch(url, {
                 method: method,
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             if (resp.ok) {
-                clearItemForm();
+                closeItemEditorModal();
                 loadData();
             } else {
                 alert("Errore salvataggio articolo");
@@ -316,7 +379,7 @@
 
         async function deleteItem(id, event) {
             event.stopPropagation();
-            if(!confirm("Eliminare articolo?")) return;
+            if (!confirm("Eliminare articolo?")) return;
             const resp = await fetch('/menu/' + id, { method: 'DELETE' });
             if (resp.ok) {
                 clearItemForm();
@@ -355,7 +418,7 @@
                 return alert("Seleziona un file JSON.");
             }
             const mode = document.querySelector('input[name="import_mode"]:checked').value;
-            
+
             if (mode === 'replace') {
                 if (!confirm("Sei veramente sicuro? Tutti gli articoli e le categorie attuali verranno eliminati!")) {
                     return;
@@ -364,13 +427,13 @@
 
             const file = fileInput.files[0];
             const reader = new FileReader();
-            reader.onload = async function(e) {
+            reader.onload = async function (e) {
                 try {
                     const jsonData = JSON.parse(e.target.result);
                     if (!jsonData.categories || !jsonData.items) {
                         return alert("Il file JSON non sembra essere nel formato corretto. Mancano 'categories' o 'items'.");
                     }
-                    
+
                     const payload = {
                         mode: mode,
                         data: jsonData
@@ -378,7 +441,7 @@
 
                     const resp = await fetch('/import/menu_json', {
                         method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
 
@@ -402,4 +465,5 @@
         init();
     </script>
 </body>
+
 </html>

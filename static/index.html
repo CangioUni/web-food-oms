@@ -61,7 +61,8 @@
         </div>
 
         <div id="main-panel" class="flex">
-            <div id="category-sidebar" class="p-2 bg-gray-200 border-r flex flex-col items-center py-4 space-y-4">
+            <div id="category-sidebar"
+                class="flex-shrink-0 p-2 bg-gray-200 border-r flex flex-col items-center py-4 space-y-4 overflow-y-auto">
             </div>
             <div class="flex-grow flex flex-col">
                 <div id="menu-grid"
@@ -248,37 +249,69 @@
         class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
         <div class="bg-gray-800 p-8 rounded-lg w-1/2">
             <h2 class="modal-title mb-6 border-b border-gray-600 pb-2">Impostazioni</h2>
-            <div class="mb-4">
-                <label class="block mb-2 font-bold">IP Stampante Scontrini</label>
-                <div class="flex space-x-2">
-                    <input type="text" id="bill-printer-ip"
-                        class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600" />
-                    <button onclick="testPrinter('bill-printer-ip')"
-                        class="bg-blue-600 hover:bg-blue-500 px-4 rounded font-bold whitespace-nowrap">Test IP</button>
+            <div class="mb-6 p-5 border border-gray-600 rounded-lg bg-gray-900 shadow-inner">
+                <h3 class="text-xl font-bold mb-4 text-blue-400 border-b border-gray-700 pb-2">Impostazioni Cassa (Personali)</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block mb-2 font-bold">IP Stampante Scontrini</label>
+                        <div class="flex space-x-2">
+                            <input type="text" id="bill-printer-ip"
+                                class="bg-gray-700 text-white p-2 rounded border border-gray-600 w-full" />
+                            <button onclick="testPrinter('bill-printer-ip')"
+                                class="bg-blue-600 hover:bg-blue-500 px-4 rounded font-bold whitespace-nowrap">Test</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block mb-2 font-bold">Protocollo Stampante</label>
+                        <select id="printer-protocol" class="bg-gray-700 text-white p-2 rounded border border-gray-600 w-full font-bold">
+                            <option value="escpos">ESC/POS</option>
+                            <option value="xon/xoff">XON/XOFF</option>
+                        </select>
+                    </div>
                 </div>
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="checkbox" id="auto-print-main-cb"
+                        class="w-6 h-6 rounded text-green-500 focus:ring-green-500 bg-gray-700 border-gray-600">
+                    <span class="font-bold text-lg">Stampa Scontrino Automatica</span>
+                </label>
             </div>
-            <div class="mb-4">
-                <label class="block mb-2 font-bold">IP Stampante Cucina</label>
-                <div class="flex space-x-2">
-                    <input type="text" id="kitchen-printer-ip"
-                        class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600" />
-                    <button onclick="testPrinter('kitchen-printer-ip')"
-                        class="bg-blue-600 hover:bg-blue-500 px-4 rounded font-bold whitespace-nowrap">Test IP</button>
+
+            <div class="mb-6 p-5 border border-gray-600 rounded-lg bg-gray-900 shadow-inner">
+                <h3 class="text-xl font-bold mb-4 text-green-400 border-b border-gray-700 pb-2">Impostazioni Cucina (Globali)</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block mb-2 font-bold">IP Stampante Cucina</label>
+                        <div class="flex space-x-2">
+                            <input type="text" id="kitchen-printer-ip"
+                                class="bg-gray-700 text-white p-2 rounded border border-gray-600 w-full" />
+                            <button onclick="testPrinter('kitchen-printer-ip')"
+                                class="bg-blue-600 hover:bg-blue-500 px-4 rounded font-bold whitespace-nowrap">Test</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block mb-2 font-bold">Protocollo Stampante</label>
+                        <select id="kitchen-printer-protocol" class="bg-gray-700 text-white p-2 rounded border border-gray-600 w-full font-bold">
+                            <option value="escpos">ESC/POS</option>
+                            <option value="xon/xoff">XON/XOFF</option>
+                        </select>
+                    </div>
                 </div>
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="checkbox" id="auto-print-kitchen-cb"
+                        class="w-6 h-6 rounded text-green-500 focus:ring-green-500 bg-gray-700 border-gray-600">
+                    <span class="font-bold text-lg">Stampa Comanda Automatica</span>
+                </label>
             </div>
+
             <div class="mb-4">
                 <label class="block mb-2 font-bold">Prossimo N. Ordine / Scontrino</label>
-                <input type="number" id="settings-next-bill"
-                    class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600 font-mono text-xl" />
-                <p class="text-sm text-gray-400 mt-1">Imposta il numero da cui ripartire. Non cancellerà lo storico a
-                    database.</p>
-            </div>
-            <div class="mb-8">
-                <label class="flex items-center space-x-3 cursor-pointer">
-                    <input type="checkbox" id="auto-print-cb"
-                        class="w-6 h-6 rounded text-green-500 focus:ring-green-500 bg-gray-700 border-gray-600">
-                    <span class="font-bold text-xl">Stampa Scontrino Automatica</span>
-                </label>
+                <div class="flex items-center space-x-2">
+                    <input type="number" id="settings-next-bill"
+                        class="bg-gray-700 text-white p-2 text-center rounded border border-gray-600 font-mono text-xl w-32 hide-spinners" />
+                    <button onclick="changeNextBill(-1)" class="bg-gray-600 hover:bg-gray-500 text-white w-12 h-12 rounded-full font-bold text-2xl flex items-center justify-center shadow transition-colors">-</button>
+                    <button onclick="changeNextBill(1)" class="bg-gray-600 hover:bg-gray-500 text-white w-12 h-12 rounded-full font-bold text-2xl flex items-center justify-center shadow transition-colors">+</button>
+                </div>
+                <p class="text-sm text-gray-400 mt-1">Imposta il numero da cui ripartire. Non cancellerà lo storico a database.</p>
             </div>
             <div class="flex justify-end space-x-4">
                 <button onclick="closeSettings()" class="bg-gray-600 px-6 py-2 rounded modal-btn">Annulla</button>
@@ -289,15 +322,20 @@
 
     <!-- Combo Modal -->
     <div id="combo-modal"
-        class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-white z-50">
-        <div class="bg-gray-800 p-8 rounded-lg w-1/2">
-            <h2 class="modal-title mb-4 border-b border-gray-600 pb-2">Configura Menù</h2>
-            <div id="combo-slots-container" class="mb-6 space-y-4">
+        class="hidden fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex flex-col items-center justify-center text-white z-50 p-4">
+        <div
+            class="bg-gray-900 p-8 rounded-2xl w-full max-w-3xl shadow-2xl border border-gray-700 max-h-[90vh] flex flex-col">
+            <h2
+                class="text-4xl font-black mb-6 border-b border-gray-700 pb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+                Configura Menù</h2>
+            <div id="combo-slots-container" class="mb-6 space-y-6 overflow-y-auto pr-2 flex-grow">
                 <!-- dynamic slots here -->
             </div>
-            <div class="flex justify-end space-x-4">
-                <button onclick="closeComboModal()" class="bg-gray-600 px-6 py-2 rounded modal-btn">Annulla</button>
-                <button onclick="confirmComboModal()" class="bg-green-600 px-6 py-2 rounded modal-btn">Aggiungi
+            <div class="flex justify-end space-x-4 border-t border-gray-700 pt-6 mt-auto">
+                <button onclick="closeComboModal()"
+                    class="bg-gray-700 hover:bg-gray-600 px-8 py-4 rounded-xl text-xl font-bold transition-colors shadow">Annulla</button>
+                <button onclick="confirmComboModal()"
+                    class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 px-8 py-4 rounded-xl text-xl font-bold shadow-lg transition-all transform hover:-translate-y-1">Aggiungi
                     al Carrello</button>
             </div>
         </div>
@@ -408,10 +446,11 @@
             }
 
             const catSidebar = document.getElementById('category-sidebar');
-            catSidebar.innerHTML = '';
+            let catHtml = '';
             categoriesData.forEach(c => {
-                catSidebar.innerHTML += `<button onclick="setCategory('${c.name}')" class="w-20 h-20 bg-white rounded-lg shadow cat-btn-text hover:bg-yellow-100 flex items-center justify-center text-center capitalize">${c.name}</button>`;
+                catHtml += `<button onclick="setCategory('${c.name}')" class="w-20 h-20 bg-white rounded-lg shadow cat-btn-text hover:bg-yellow-100 flex items-center justify-center text-center capitalize">${c.name}</button>`;
             });
+            catSidebar.innerHTML = catHtml;
 
             await loadRemoteState();
 
@@ -439,6 +478,9 @@
                     state.discount_type = savedState.discount_type || '%';
                     state.payment_method = savedState.payment_method || 'Cash';
                     state.orderNotes = savedState.orderNotes || '';
+                    state.auto_print_main = data.auto_print_main !== false;
+                    state.printer_ip = data.printer_ip || '';
+                    state.printer_protocol = data.printer_protocol || 'escpos';
 
                     document.getElementById('lbl-table').innerText = state.table;
                     const btnTake = document.getElementById('btn-takeaway');
@@ -474,7 +516,10 @@
             saveTimeout = setTimeout(async () => {
                 const payload = {
                     active_cart: JSON.stringify(cart),
-                    active_state: JSON.stringify(state)
+                    active_state: JSON.stringify(state),
+                    auto_print_main: state.auto_print_main !== false,
+                    printer_ip: state.printer_ip || '',
+                    printer_protocol: state.printer_protocol || 'escpos'
                 };
                 await fetch('/users/' + state.user_id + '/cart', {
                     method: 'POST',
@@ -604,16 +649,17 @@
         function setCategory(cat) {
             activeCategory = cat;
             const grid = document.getElementById('menu-grid');
-            grid.innerHTML = '';
+            let html = '';
             const filteredMenu = menuData.filter(item => item.category === cat);
             filteredMenu.forEach(item => {
-                grid.innerHTML += `
+                html += `
                     <button onclick="addToCart(${JSON.stringify(item).replace(/"/g, '&quot;')})" class="bg-white p-2 rounded shadow hover:shadow-lg flex flex-col items-center justify-center aspect-square">
                         <img src="${item.image_url}" class="w-full h-1/2 object-cover rounded mb-2">
                         <span class="menu-item-title block text-black leading-tight w-full truncate">${item.description}</span>
                         <span class="text-green-600 menu-item-price font-mono mt-1">€${item.price.toFixed(2)}</span>
                     </button>`;
             });
+            grid.innerHTML = html;
         }
 
         let activeComboItem = null;
@@ -688,32 +734,36 @@
 
         function openComboModal(item) {
             const container = document.getElementById('combo-slots-container');
-            container.innerHTML = '';
+            let slotsHtml = '';
             let slots = [];
             try { slots = JSON.parse(item.combo_items); } catch (e) { }
-
             slots.forEach((slot, idx) => {
                 if (slot.length === 0) return;
-                let html = `<div class="bg-gray-700 p-4 rounded"><h3 class="cart-header-title mb-2 text-yellow-400">Selezione ${idx + 1}</h3><div class="flex flex-wrap gap-2">`;
+                let html = `<div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-inner">
+                    <h3 class="text-xl font-bold mb-4 text-blue-400 uppercase tracking-wider">Selezione ${idx + 1}</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">`;
 
-                if (slot.length === 1) {
-                    html += `<div class="bg-blue-600 px-4 py-2 rounded font-bold border-2 border-blue-400">
-                                <input type="radio" name="combo-slot-${idx}" value="${slot[0]}" checked class="hidden">
-                                ${slot[0]}
-                             </div>`;
-                } else {
-                    slot.forEach((opt, optIdx) => {
-                        const checked = optIdx === 0 ? 'checked' : '';
-                        html += `
-                        <label class="cursor-pointer bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded font-bold border-2 border-transparent relative">
-                            <input type="radio" name="combo-slot-${idx}" value="${opt}" ${checked} class="peer absolute opacity-0 w-full h-full cursor-pointer">
-                            <span class="peer-checked:text-blue-300 peer-checked:bg-blue-600 peer-checked:border-blue-400 border-2 border-transparent px-4 py-2 rounded block transition-all">${opt}</span>
-                        </label>`;
-                    });
-                }
+                slot.forEach((opt, optIdx) => {
+                    const checked = optIdx === 0 ? 'checked' : '';
+                    let optName = "Nessuna Scelta";
+                    if (opt !== 0 && opt !== "0") {
+                        const found = menuData.find(m => m.id == opt);
+                        if (found) optName = found.description;
+                    }
+
+                    html += `
+                    <label class="cursor-pointer relative">
+                        <input type="radio" name="combo-slot-${idx}" value="${optName}" ${checked} class="peer sr-only">
+                        <div class="h-full flex items-center justify-center p-4 rounded-xl border-2 border-gray-600 bg-gray-700 text-gray-300 font-bold text-lg transition-all duration-200 ease-in-out hover:bg-gray-600 hover:border-gray-500 peer-checked:bg-blue-600 peer-checked:border-blue-400 peer-checked:text-white peer-checked:shadow-[0_0_15px_rgba(59,130,246,0.5)] peer-checked:-translate-y-1 text-center">
+                            ${optName}
+                        </div>
+                    </label>`;
+                });
+
                 html += `</div></div>`;
-                container.innerHTML += html;
+                slotsHtml += html;
             });
+            container.innerHTML = slotsHtml;
 
             document.getElementById('combo-modal').classList.remove('hidden');
         }
@@ -733,7 +783,9 @@
                 if (slot.length === 0) return;
                 const radios = document.getElementsByName(`combo-slot-${idx}`);
                 for (let r of radios) {
-                    if (r.checked) selections.push(r.value);
+                    if (r.checked && r.value !== "Nessuna Scelta") {
+                        selections.push(r.value);
+                    }
                 }
             });
 
@@ -970,10 +1022,15 @@
         async function openSettings() {
             const resp = await fetch('/settings');
             const data = await resp.json();
-            document.getElementById('bill-printer-ip').value = data.bill_printer_ip || '';
             document.getElementById('kitchen-printer-ip').value = data.kitchen_printer_ip || '';
-            document.getElementById('auto-print-cb').checked = data.auto_print;
+            document.getElementById('auto-print-kitchen-cb').checked = data.auto_print_kitchen !== false;
+            document.getElementById('kitchen-printer-protocol').value = data.kitchen_printer_protocol || 'escpos';
             document.getElementById('settings-next-bill').value = data.next_order_number || 1;
+
+            document.getElementById('bill-printer-ip').value = state.printer_ip || '';
+            document.getElementById('printer-protocol').value = state.printer_protocol || 'escpos';
+            document.getElementById('auto-print-main-cb').checked = state.auto_print_main !== false;
+
             document.getElementById('settings-overlay').classList.remove('hidden');
         }
 
@@ -1000,13 +1057,29 @@
             }
         }
 
+        function changeNextBill(delta) {
+            const input = document.getElementById('settings-next-bill');
+            let val = parseInt(input.value) || 1;
+            val += delta;
+            if (val < 1) val = 1;
+            input.value = val;
+        }
+
         async function saveSettings() {
             const payload = {
-                bill_printer_ip: document.getElementById('bill-printer-ip').value,
+                bill_printer_ip: "", // Deprecated globally
                 kitchen_printer_ip: document.getElementById('kitchen-printer-ip').value,
-                auto_print: document.getElementById('auto-print-cb').checked,
+                auto_print_kitchen: document.getElementById('auto-print-kitchen-cb').checked,
+                kitchen_printer_protocol: document.getElementById('kitchen-printer-protocol').value,
                 next_order_number: parseInt(document.getElementById('settings-next-bill').value) || 1
             };
+            
+            // Aggiorniamo anche lo stato utente per lo scontrino principale
+            state.auto_print_main = document.getElementById('auto-print-main-cb').checked;
+            state.printer_ip = document.getElementById('bill-printer-ip').value;
+            state.printer_protocol = document.getElementById('printer-protocol').value;
+            await saveRemoteState();
+
             const resp = await fetch('/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

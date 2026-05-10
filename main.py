@@ -24,6 +24,8 @@ class User(Base):
     printer_ip = Column(String)
     active_cart = Column(String, default="[]")
     active_state = Column(String, default="{}")
+    auto_print_main = Column(Boolean, default=True)
+    printer_protocol = Column(String, default="escpos")
 
 class Category(Base):
     __tablename__ = "categories"
@@ -41,6 +43,7 @@ class MenuItem(Base):
     additions = Column(String, default="")
     is_combo = Column(Boolean, default=False)
     combo_items = Column(String, default="[]")
+    is_active = Column(Boolean, default=True)
 
 class SystemSettings(Base):
     __tablename__ = "system_settings"
@@ -49,6 +52,8 @@ class SystemSettings(Base):
     kitchen_printer_ip = Column(String)
     auto_print = Column(Boolean, default=True)
     next_order_number = Column(Integer, default=1)
+    auto_print_kitchen = Column(Boolean, default=True)
+    kitchen_printer_protocol = Column(String, default="escpos")
 
 class Order(Base):
     __tablename__ = "orders"
@@ -79,6 +84,17 @@ class OrderItem(Base):
 
 Base.metadata.create_all(bind=engine)
 
+# Add is_active column if it doesn't exist
+db = SessionLocal()
+try:
+    from sqlalchemy import text
+    db.execute(text("ALTER TABLE menu_items ADD COLUMN is_active BOOLEAN DEFAULT 1"))
+    db.commit()
+except Exception:
+    db.rollback()
+finally:
+    db.close()
+
 # Add column 'additions' if missing
 from sqlalchemy import inspect
 inspector = inspect(engine)
@@ -88,6 +104,16 @@ if "menu_items" in inspector.get_table_names():
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE menu_items ADD COLUMN additions VARCHAR DEFAULT ''"))
 
+if "system_settings" in inspector.get_table_names():
+    ss_columns = [c["name"] for c in inspector.get_columns("system_settings")]
+    with engine.begin() as conn:
+        if "next_order_number" not in ss_columns:
+            conn.execute(text("ALTER TABLE system_settings ADD COLUMN next_order_number INTEGER DEFAULT 1"))
+        if "auto_print_kitchen" not in ss_columns:
+            conn.execute(text("ALTER TABLE system_settings ADD COLUMN auto_print_kitchen BOOLEAN DEFAULT 1"))
+        if "kitchen_printer_protocol" not in ss_columns:
+            conn.execute(text("ALTER TABLE system_settings ADD COLUMN kitchen_printer_protocol VARCHAR DEFAULT 'escpos'"))
+
 if "users" in inspector.get_table_names():
     user_columns = [c["name"] for c in inspector.get_columns("users")]
     with engine.begin() as conn:
@@ -95,12 +121,10 @@ if "users" in inspector.get_table_names():
             conn.execute(text("ALTER TABLE users ADD COLUMN active_cart VARCHAR DEFAULT '[]'"))
         if "active_state" not in user_columns:
             conn.execute(text("ALTER TABLE users ADD COLUMN active_state VARCHAR DEFAULT '{}'"))
-
-if "system_settings" in inspector.get_table_names():
-    ss_columns = [c["name"] for c in inspector.get_columns("system_settings")]
-    with engine.begin() as conn:
-        if "next_order_number" not in ss_columns:
-            conn.execute(text("ALTER TABLE system_settings ADD COLUMN next_order_number INTEGER DEFAULT 1"))
+        if "auto_print_main" not in user_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN auto_print_main BOOLEAN DEFAULT 1"))
+        if "printer_protocol" not in user_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN printer_protocol VARCHAR DEFAULT 'escpos'"))
 
 if "orders" in inspector.get_table_names():
     order_columns = [c["name"] for c in inspector.get_columns("orders")]
@@ -151,12 +175,36 @@ def build_header_row(label: str, value: str, width: int = 48) -> str:
     spaces = width - len(label) - len(value)
     return label + " " * max(spaces, 1) + value
 
-def print_to_escpos(order_id: int, payload: dict):
+def print_bill(order_id: int, payload: dict, is_kitchen: bool = False):
     db = SessionLocal()
+    
+    # We pass the active user_id inside payload from frontend to find out who printed it
+    active_user_id = payload.get('user_id', 1)
+    user = db.query(User).filter(User.id == active_user_id).first()
     settings = db.query(SystemSettings).first()
     db.close()
     
-    printer_ip = settings.bill_printer_ip if settings and settings.bill_printer_ip else "10.0.0.200"
+    # Retrieve correct protocol
+    protocol = "escpos"
+    if is_kitchen and settings:
+        protocol = settings.kitchen_printer_protocol
+    elif not is_kitchen and user:
+        protocol = user.printer_protocol
+
+    if protocol == "xon/xoff":
+        # TODO: Implement XON/XOFF printing
+        print("XON/XOFF protocol selected. Printing bypassed.")
+        return False, "Protocollo XON/XOFF non supportato"
+
+    printer_ip = "10.0.0.200"
+    if is_kitchen and settings:
+        printer_ip = settings.kitchen_printer_ip
+    elif not is_kitchen and user:
+        printer_ip = user.printer_ip
+
+    if not printer_ip:
+        printer_ip = "10.0.0.200"
+
     port = 9100
     
     try:
@@ -164,7 +212,8 @@ def print_to_escpos(order_id: int, payload: dict):
         p._raw(b'\x1b\x74\x13') # CP 858
         
         try:
-            p.image("rblogo.png", center=True)
+            if not is_kitchen:
+                p.image("rblogo.png", center=True)
         except Exception as e:
             print(f"Logo print error: {e}")
             pass
@@ -281,6 +330,10 @@ def print_kitchen_receipt(order_id: int, payload: dict):
     settings = db.query(SystemSettings).first()
     db.close()
 
+    if settings and settings.kitchen_printer_protocol == "xon/xoff":
+        print("XON/XOFF protocol selected. Kitchen printing bypassed.")
+        return False, "Protocollo XON/XOFF non supportato"
+
     printer_ip = settings.kitchen_printer_ip if settings and settings.kitchen_printer_ip else "10.0.0.200"
     port = 9100
 
@@ -380,7 +433,8 @@ def read_root():
 class SettingsUpdate(BaseModel):
     bill_printer_ip: str
     kitchen_printer_ip: str
-    auto_print: bool
+    auto_print_kitchen: bool
+    kitchen_printer_protocol: str
     next_order_number: int
 
 @app.get("/settings")
@@ -389,8 +443,20 @@ def get_settings():
     settings = db.query(SystemSettings).first()
     db.close()
     if settings:
-        return {"bill_printer_ip": settings.bill_printer_ip, "kitchen_printer_ip": settings.kitchen_printer_ip, "auto_print": settings.auto_print, "next_order_number": settings.next_order_number}
-    return {"bill_printer_ip": "", "kitchen_printer_ip": "", "auto_print": True, "next_order_number": 1}
+        return {
+            "bill_printer_ip": settings.bill_printer_ip, 
+            "kitchen_printer_ip": settings.kitchen_printer_ip, 
+            "auto_print_kitchen": settings.auto_print_kitchen, 
+            "kitchen_printer_protocol": settings.kitchen_printer_protocol,
+            "next_order_number": settings.next_order_number
+        }
+    return {
+        "bill_printer_ip": "", 
+        "kitchen_printer_ip": "", 
+        "auto_print_kitchen": True, 
+        "kitchen_printer_protocol": "escpos",
+        "next_order_number": 1
+    }
 
 @app.post("/settings")
 def update_settings(payload: SettingsUpdate):
@@ -402,7 +468,8 @@ def update_settings(payload: SettingsUpdate):
             db.add(settings)
         settings.bill_printer_ip = payload.bill_printer_ip
         settings.kitchen_printer_ip = payload.kitchen_printer_ip
-        settings.auto_print = payload.auto_print
+        settings.auto_print_kitchen = payload.auto_print_kitchen
+        settings.kitchen_printer_protocol = payload.kitchen_printer_protocol
         settings.next_order_number = payload.next_order_number
         db.commit()
         return {"status": "success"}
@@ -437,6 +504,9 @@ def get_users():
 class UserStateUpdate(BaseModel):
     active_cart: str
     active_state: str
+    auto_print_main: bool
+    printer_ip: str
+    printer_protocol: str
 
 @app.get("/users/{user_id}/cart")
 def get_user_cart(user_id: int):
@@ -444,8 +514,14 @@ def get_user_cart(user_id: int):
     user = db.query(User).filter(User.id == user_id).first()
     db.close()
     if user:
-        return {"active_cart": user.active_cart or "[]", "active_state": user.active_state or "{}"}
-    return {"active_cart": "[]", "active_state": "{}"}
+        return {
+            "active_cart": user.active_cart or "[]", 
+            "active_state": user.active_state or "{}", 
+            "auto_print_main": user.auto_print_main,
+            "printer_ip": user.printer_ip or "",
+            "printer_protocol": user.printer_protocol or "escpos"
+        }
+    return {"active_cart": "[]", "active_state": "{}", "auto_print_main": True, "printer_ip": "", "printer_protocol": "escpos"}
 
 @app.post("/users/{user_id}/cart")
 def update_user_cart(user_id: int, payload: UserStateUpdate):
@@ -454,6 +530,9 @@ def update_user_cart(user_id: int, payload: UserStateUpdate):
     if user:
         user.active_cart = payload.active_cart
         user.active_state = payload.active_state
+        user.auto_print_main = payload.auto_print_main
+        user.printer_ip = payload.printer_ip
+        user.printer_protocol = payload.printer_protocol
         db.commit()
     db.close()
     return {"status": "success"}
@@ -461,7 +540,7 @@ def update_user_cart(user_id: int, payload: UserStateUpdate):
 @app.get("/menu")
 def get_menu():
     db = SessionLocal()
-    items = db.query(MenuItem).all()
+    items = db.query(MenuItem).filter(MenuItem.is_active == True).all()
     db.close()
     return items
 
@@ -473,10 +552,11 @@ class MenuItemCreate(BaseModel):
     price: float
     image_url: str
     category: str
-    components: str
+    components: str = ""
     additions: str = ""
     is_combo: bool = False
     combo_items: str = "[]"
+    is_active: bool = True
 
 @app.get("/categories")
 def get_categories():
@@ -514,8 +594,10 @@ def create_menu_item(payload: MenuItemCreate):
 @app.delete("/menu/{item_id}")
 def delete_menu_item(item_id: int):
     db = SessionLocal()
-    db.query(MenuItem).filter(MenuItem.id == item_id).delete()
-    db.commit()
+    item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
+    if item:
+        item.is_active = False
+        db.commit()
     db.close()
     return {"status": "success"}
 
@@ -532,6 +614,7 @@ def update_menu_item(item_id: int, payload: MenuItemCreate):
         item.additions = payload.additions
         item.is_combo = payload.is_combo
         item.combo_items = payload.combo_items
+        item.is_active = payload.is_active
         db.commit()
     db.close()
     return {"status": "success"}
@@ -613,30 +696,32 @@ def create_order(payload: dict = Body(...)):
         
         # Clear the user's active cart after successfully placing the order
         user = db.query(User).filter(User.id == kwargs['user_id']).first()
+        auto_print_main = True
         if user:
+            auto_print_main = user.auto_print_main
             user.active_cart = "[]"
             user.active_state = "{}"
             
         db.commit()
         
-        auto_print_enabled = settings.auto_print if settings else True
+        auto_print_kitchen = settings.auto_print_kitchen if settings else True
         bill_status = {"printed": False, "message": "Autostampa disabilitata"}
         kitchen_status = {"printed": False, "message": "Non necessaria / disabilitata"}
 
-        if auto_print_enabled:
-            # We always print the receipt for the customer
-            b_ok, b_msg = print_to_escpos(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, payload)
+        # We print the receipt for the customer if user setting is True
+        if auto_print_main:
+            b_ok, b_msg = print_bill(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, payload, is_kitchen=False)
             bill_status = {"printed": b_ok, "message": b_msg}
 
-            # Print to kitchen only if it is a new order
-            if is_new_order:
-                k_ok, k_msg = print_kitchen_receipt(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, payload)
-                kitchen_status = {"printed": k_ok, "message": k_msg}
+        # Print to kitchen if system setting is True and it's a new order
+        if auto_print_kitchen and is_new_order:
+            k_ok, k_msg = print_kitchen_receipt(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, payload)
+            kitchen_status = {"printed": k_ok, "message": k_msg}
         
         return {
             "status": "success", 
             "order_id": order_number_str, 
-            "auto_print": auto_print_enabled,
+            "auto_print": auto_print_main or auto_print_kitchen,
             "bill_status": bill_status,
             "kitchen_status": kitchen_status
         }
@@ -686,7 +771,8 @@ def export_menu_json():
                 "components": i.components,
                 "additions": i.additions,
                 "is_combo": i.is_combo,
-                "combo_items": i.combo_items
+                "combo_items": i.combo_items,
+                "is_active": i.is_active
             } for i in items
         ]
     }
@@ -730,7 +816,8 @@ def import_menu_json(payload: ImportMenuPayload):
                 components=i.get("components", ""),
                 additions=i.get("additions", ""),
                 is_combo=i.get("is_combo", False),
-                combo_items=i.get("combo_items", "[]")
+                combo_items=i.get("combo_items", "[]"),
+                is_active=i.get("is_active", True)
             )
             db.add(new_item)
             

@@ -7,14 +7,18 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.sql import text
 import datetime
-from fpdf import FPDF
-from escpos.printer import Network
+from zoneinfo import ZoneInfo
 import socket
+
+ROME_TZ = ZoneInfo("Europe/Rome")
+import printing
+from printing import print_bill, print_kitchen_receipt, row_left_right
 
 DATABASE_URL = "sqlite:///./orders.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
 
 # --- Models ---
 class User(Base):
@@ -59,7 +63,7 @@ class Order(Base):
     __tablename__ = "orders"
     id = Column(Integer, primary_key=True, autoincrement=True)
     order_number = Column(String, default="")
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    timestamp = Column(DateTime, default=lambda: datetime.datetime.now(ROME_TZ))
     total = Column(Float)
     discount = Column(Float)
     payment_method = Column(String)
@@ -170,258 +174,9 @@ if not db.query(User).first():
     db.commit()
 db.close()
 
-def build_header_row(label: str, value: str, width: int = 48) -> str:
-    """Return a left/right aligned string padded to `width` characters."""
-    spaces = width - len(label) - len(value)
-    return label + " " * max(spaces, 1) + value
+# Initialize printing module (must be after models + DB setup)
+printing.init(SessionLocal, User, SystemSettings, MenuItem)
 
-def print_bill(order_id: int, payload: dict, is_kitchen: bool = False):
-    db = SessionLocal()
-    
-    # We pass the active user_id inside payload from frontend to find out who printed it
-    active_user_id = payload.get('user_id', 1)
-    user = db.query(User).filter(User.id == active_user_id).first()
-    settings = db.query(SystemSettings).first()
-    db.close()
-    
-    # Retrieve correct protocol
-    protocol = "escpos"
-    if is_kitchen and settings:
-        protocol = settings.kitchen_printer_protocol
-    elif not is_kitchen and user:
-        protocol = user.printer_protocol
-
-    if protocol == "xon/xoff":
-        # TODO: Implement XON/XOFF printing
-        print("XON/XOFF protocol selected. Printing bypassed.")
-        return False, "Protocollo XON/XOFF non supportato"
-
-    printer_ip = "10.0.0.200"
-    if is_kitchen and settings:
-        printer_ip = settings.kitchen_printer_ip
-    elif not is_kitchen and user:
-        printer_ip = user.printer_ip
-
-    if not printer_ip:
-        printer_ip = "10.0.0.200"
-
-    port = 9100
-    
-    try:
-        p = Network(printer_ip, port, profile="KR-306", timeout=2.0)
-        p._raw(b'\x1b\x74\x13') # CP 858
-        
-        try:
-            if not is_kitchen:
-                p.image("rblogo.png", center=True)
-        except Exception as e:
-            print(f"Logo print error: {e}")
-            pass
-
-        # Group header
-        p.set(align="center", bold=True, normal_textsize=True)
-        p.text("Gruppo Scout\n")
-        p.text("VILLAFRANCA DI FORLI' 1\n")
-        p.set(align="center", bold=False)
-        p.text("Via Lughese 269\n")
-        p.text("47122, FORLI' (FC)\n")
-        p.text("\n")
-        
-        # Column header
-        p.set(align="left", double_height=True)
-        header = build_header_row("DESCRIZIONE", "Prezzo (\xd5)", 48) 
-        p.text(header + "\n\n")
-        p.set(normal_textsize=True)
-        
-        # Line items
-        p.set(align="left")
-        
-        gross_total = 0.0
-        
-        grouped_items = []
-        for item in payload.get('items', []):
-            desc = item.get('description', '')
-            price = float(item.get('price', 0))
-            combo_choices = item.get('combo_choices', '')
-            notes = item.get('notes', '')
-            ingredients = item.get('ingredients', '')
-            
-            is_groupable = not combo_choices and not notes and not ingredients
-            
-            if is_groupable:
-                found = False
-                for g in grouped_items:
-                    if g['groupable'] and g['description'] == desc and g['price'] == price:
-                        g['qty'] += 1
-                        found = True
-                        break
-                if not found:
-                    grouped_items.append({
-                        'groupable': True, 'description': desc, 'price': price,
-                        'qty': 1, 'combo_choices': '', 'notes': '', 'ingredients': ''
-                    })
-            else:
-                grouped_items.append({
-                    'groupable': False, 'description': desc, 'price': price,
-                    'qty': 1, 'combo_choices': combo_choices, 'notes': notes, 'ingredients': ingredients
-                })
-                
-        for item in grouped_items:
-            desc = item['description']
-            price = item['price']
-            qty = item['qty']
-            item_total = price * qty
-            gross_total += item_total
-            
-            if qty > 1:
-                p.text(f"{qty} x {price:.2f}".replace('.', ',') + "\n")
-                p.text(build_header_row(desc, f"{item_total:.2f}".replace('.', ','), 48) + "\n")
-            else:
-                p.text(build_header_row(desc, f"{price:.2f}".replace('.', ','), 48) + "\n")
-            
-            combo_choices = item['combo_choices']
-            if combo_choices:
-                for sub in combo_choices.split(','):
-                    sub_clean = sub.strip()
-                    if sub_clean:
-                        p.text(" - " + sub_clean + "\n")
-                        
-        # Separator
-        p.text("-" * 48 + "\n")
-        
-        # Total
-        p.set(align="left", double_height=True)
-        total_str = f"{gross_total:.2f}".replace('.', ',')
-        p.text(build_header_row("TOTALE", total_str, 48) + "\n")
-        p.set(normal_textsize=True)
-        
-        # Footer
-        p.set(align="center")
-        now = datetime.datetime.now()
-        p.text(f"\n{now.strftime('%d-%m-%Y  %H:%M')}\n")
-        p.text(f"DOCUMENTO N. {order_id:03d}\n")
-
-        payment_status = payload.get('payment_status', True)
-        payment_method = payload.get('payment_method', '')
-
-        p.text("\n")
-        if payment_status:
-            p.set(align="center", bold=True, double_height=True)
-            p.text("PAGATO\n")
-            p.set(normal_textsize=True)
-            if payment_method:
-                p.text(f"Metodo: {payment_method}\n")
-        else:
-            p.set(align="center", bold=True, double_height=True)
-            p.text("NON PAGATO\n")
-            p.set(normal_textsize=True)
-
-        p.text("\nSCONTRINO NON FISCALE\n\n")
-        
-        p.cut()
-        p.close()
-        return True, "Scontrino stampato correttamente"
-    except Exception as e:
-        print(f"Error printing bill: {e}")
-        return False, f"Errore stampante scontrini: {str(e)}"
-
-def print_kitchen_receipt(order_id: int, payload: dict):
-    db = SessionLocal()
-    settings = db.query(SystemSettings).first()
-    db.close()
-
-    if settings and settings.kitchen_printer_protocol == "xon/xoff":
-        print("XON/XOFF protocol selected. Kitchen printing bypassed.")
-        return False, "Protocollo XON/XOFF non supportato"
-
-    printer_ip = settings.kitchen_printer_ip if settings and settings.kitchen_printer_ip else "10.0.0.200"
-    port = 9100
-
-    try:
-        p = Network(printer_ip, port, profile="KR-306", timeout=2.0)
-        p._raw(b'\x1b\x74\x13') # CP 858
-
-        p.set(align="center", bold=True, double_height=True, double_width=True)
-        p.text(f"ORDINE {order_id:03d}\n")
-        p.set(align="center", normal_textsize=True)
-        now = datetime.datetime.now()
-        p.text(f"{now.strftime('%d-%m-%Y %H:%M')}\n")
-        p.text("-" * 48 + "\n")
-
-        takeaway = payload.get('takeaway', False)
-        table = payload.get('table_number', 'Nessuno')
-        if takeaway:
-            p.set(align="center", bold=True, double_height=True)
-            p.text(">>> ASPORTO <<<\n")
-            p.set(normal_textsize=True)
-        elif table and table.lower() != 'nessuno':
-            p.set(align="center", bold=True, double_height=True)
-            p.text(f"TAVOLO {table}\n")
-            p.set(normal_textsize=True)
-
-        p.text("-" * 48 + "\n")
-        p.set(align="left")
-
-        # Group similar items
-        grouped_items = []
-        for item in payload.get('items', []):
-            desc = item.get('description', '')
-            combo_choices = item.get('combo_choices', '')
-            notes = item.get('notes', '')
-            ingredients = item.get('ingredients', '')
-
-            is_groupable = not combo_choices and not notes and not ingredients
-
-            if is_groupable:
-                found = False
-                for g in grouped_items:
-                    if g['groupable'] and g['description'] == desc:
-                        g['qty'] += 1
-                        found = True
-                        break
-                if not found:
-                    grouped_items.append({
-                        'groupable': True, 'description': desc,
-                        'qty': 1, 'combo_choices': '', 'notes': '', 'ingredients': ''
-                    })
-            else:
-                grouped_items.append({
-                    'groupable': False, 'description': desc,
-                    'qty': 1, 'combo_choices': combo_choices, 'notes': notes, 'ingredients': ingredients
-                })
-
-        for item in grouped_items:
-            desc = item['description']
-            qty = item['qty']
-            p.set(bold=True, double_height=True)
-            p.text(f"{qty}x {desc}\n")
-            p.set(normal_textsize=True, bold=False)
-
-            if item['combo_choices']:
-                for sub in item['combo_choices'].split(','):
-                    sub_clean = sub.strip()
-                    if sub_clean:
-                        p.text("  - " + sub_clean + "\n")
-            if item['ingredients']:
-                p.text("  [Ingr: " + item['ingredients'] + "]\n")
-            if item['notes']:
-                p.text("  *Nota: " + item['notes'] + "\n")
-
-        p.text("-" * 48 + "\n")
-        notes = payload.get('notes', '')
-        if notes:
-            p.set(bold=True)
-            p.text("NOTE ORDINE:\n")
-            p.set(bold=False)
-            p.text(notes + "\n")
-            p.text("-" * 48 + "\n")
-
-        p.cut()
-        p.close()
-        return True, "Comanda cucina stampata correttamente"
-    except Exception as e:
-        print(f"Error printing kitchen receipt: {e}")
-        return False, f"Errore stampante cucina: {str(e)}"
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -635,7 +390,7 @@ def create_order(payload: dict = Body(...)):
         }
         
         if kwargs['payment_status']:
-            kwargs['payment_datetime'] = datetime.datetime.utcnow()
+            kwargs['payment_datetime'] = datetime.datetime.now(ROME_TZ)
         else:
             kwargs['payment_datetime'] = None
 
@@ -710,7 +465,7 @@ def create_order(payload: dict = Body(...)):
 
         # We print the receipt for the customer if user setting is True
         if auto_print_main:
-            b_ok, b_msg = print_bill(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, payload, is_kitchen=False)
+            b_ok, b_msg = print_bill(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, payload)
             bill_status = {"printed": b_ok, "message": b_msg}
 
         # Print to kitchen if system setting is True and it's a new order

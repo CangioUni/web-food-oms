@@ -173,3 +173,4 @@ Thumbs.db
 
 # Project Specific
 *.db
+/static/images/*

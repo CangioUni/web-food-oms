@@ -88,8 +88,10 @@ def print_bill(order_id: int, payload: dict):
             combo_choices = item.get('combo_choices', '')
             notes = item.get('notes', '')
             ingredients = item.get('ingredients', '')
+            discount = float(item.get('discount', 0))
+            discount_type = item.get('discount_type', '%')
             
-            is_groupable = not combo_choices and not notes and not ingredients
+            is_groupable = not combo_choices and not notes and not ingredients and discount == 0
             
             if is_groupable:
                 found = False
@@ -101,27 +103,52 @@ def print_bill(order_id: int, payload: dict):
                 if not found:
                     grouped_items.append({
                         'groupable': True, 'description': desc, 'price': price,
-                        'qty': 1, 'combo_choices': '', 'notes': '', 'ingredients': ''
+                        'qty': 1, 'combo_choices': '', 'notes': '', 'ingredients': '',
+                        'discount': 0, 'discount_type': '%'
                     })
             else:
                 grouped_items.append({
                     'groupable': False, 'description': desc, 'price': price,
-                    'qty': 1, 'combo_choices': combo_choices, 'notes': notes, 'ingredients': ingredients
+                    'qty': 1, 'combo_choices': combo_choices, 'notes': notes, 'ingredients': ingredients,
+                    'discount': discount, 'discount_type': discount_type
                 })
                 
         for item in grouped_items:
             desc = item['description']
             price = item['price']
             qty = item['qty']
-            item_total = price * qty
+            item_discount = item.get('discount', 0)
+            item_discount_type = item.get('discount_type', '%')
+
+            base_item_total = price * qty
+            discount_amount = 0
+            if item_discount > 0:
+                if item_discount_type == '%':
+                    discount_amount = base_item_total * (item_discount / 100)
+                else:
+                    discount_amount = item_discount
+
+            # The net total for the item
+            item_total = base_item_total - discount_amount
+            if item_total < 0:
+                item_total = 0
+
             gross_total += item_total
             
             if qty > 1:
                 p.text(f"{qty} x {price:.2f}".replace('.', ',') + "\n")
-                p.text(row_left_right(desc, f"{item_total:.2f}".replace('.', ','), 48) + "\n")
+                p.text(row_left_right(desc, f"{base_item_total:.2f}".replace('.', ','), 48) + "\n")
             else:
                 p.text(row_left_right(desc, f"{price:.2f}".replace('.', ','), 48) + "\n")
             
+            if item_discount > 0:
+                if item_discount_type == '%':
+                    discount_label = f"SCONTO {int(item_discount)}%" if item_discount.is_integer() else f"SCONTO {item_discount:.2f}%"
+                else:
+                    discount_label = "SCONTO"
+                discount_val_str = f"-{discount_amount:.2f}".replace('.', ',')
+                p.text(row_left_right("  " + discount_label, discount_val_str, 48) + "\n")
+
             combo_choices = item['combo_choices']
             if combo_choices:
                 for sub in combo_choices.split(','):
@@ -132,9 +159,26 @@ def print_bill(order_id: int, payload: dict):
         # Separator
         p.text("-" * 48 + "\n")
         
-        # Total
+        # Totals
+        overall_discount = payload.get('discount', 0)
+
+        if overall_discount > 0:
+            p.set(align="left", double_height=False)
+            subtotal_str = f"{gross_total:.2f}".replace('.', ',')
+            p.text(row_left_right("SUBTOTALE", subtotal_str, 48) + "\n")
+
+            discount_str = f"-{overall_discount:.2f}".replace('.', ',')
+            p.text(row_left_right("SCONTO", discount_str, 48) + "\n")
+            p.text("-" * 48 + "\n")
+
+            net_total = gross_total - overall_discount
+            if net_total < 0:
+                net_total = 0
+        else:
+            net_total = gross_total
+
         p.set(align="left", double_height=True)
-        total_str = f"{gross_total:.2f}".replace('.', ',')
+        total_str = f"{net_total:.2f}".replace('.', ',')
         p.text(row_left_right("TOTALE COMPLESSIVO", total_str, 48) + "\n")
         p.set(normal_textsize=True)
 

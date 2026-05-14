@@ -85,6 +85,8 @@ class OrderItem(Base):
     notes = Column(String)
     ingredients = Column(String)
     combo_choices = Column(String, default="")
+    discount = Column(Float, default=0.0)
+    discount_type = Column(String, default="%")
 
 Base.metadata.create_all(bind=engine)
 
@@ -93,6 +95,27 @@ db = SessionLocal()
 try:
     from sqlalchemy import text
     db.execute(text("ALTER TABLE menu_items ADD COLUMN is_active BOOLEAN DEFAULT 1"))
+    db.commit()
+except Exception:
+    db.rollback()
+finally:
+    db.close()
+
+
+try:
+    db = SessionLocal()
+    from sqlalchemy import text
+    db.execute(text("ALTER TABLE order_items ADD COLUMN discount FLOAT DEFAULT 0.0"))
+    db.commit()
+except Exception:
+    db.rollback()
+finally:
+    db.close()
+
+try:
+    db = SessionLocal()
+    from sqlalchemy import text
+    db.execute(text("ALTER TABLE order_items ADD COLUMN discount_type VARCHAR DEFAULT '%'"))
     db.commit()
 except Exception:
     db.rollback()
@@ -437,7 +460,11 @@ def create_order(payload: dict = Body(...)):
             order_number_str = new_order.order_number
             is_new_order = True
 
+        new_items_for_kitchen = []
         for item in payload['items']:
+            is_sent = item.get('_is_sent_to_kitchen', False)
+            if not is_sent:
+                new_items_for_kitchen.append(item)
             order_item = OrderItem(
                 order_id=order_id_to_use,
                 description=item['description'],
@@ -445,7 +472,9 @@ def create_order(payload: dict = Body(...)):
                 price_at_sale=item['price'],
                 notes=item.get('notes', ''),
                 ingredients=item.get('ingredients', ''),
-                combo_choices=item.get('combo_choices', '')
+                combo_choices=item.get('combo_choices', ''),
+                discount=item.get('item_discount', 0.0),
+                discount_type=item.get('item_discount_type', '%')
             )
             db.add(order_item)
         
@@ -469,8 +498,8 @@ def create_order(payload: dict = Body(...)):
             bill_status = {"printed": b_ok, "message": b_msg}
 
         # Print to kitchen if system setting is True and it's a new order
-        if auto_print_kitchen and is_new_order:
-            k_ok, k_msg = print_kitchen_receipt(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, payload)
+        if auto_print_kitchen:
+            k_ok, k_msg = print_kitchen_receipt(int(order_number_str) if order_number_str.isdigit() else order_id_to_use, {"items": new_items_for_kitchen, "table_number": payload.get("table_number", "Nessuno"), "takeaway": payload.get("takeaway", False), "notes": payload.get("notes", "")})
             kitchen_status = {"printed": k_ok, "message": k_msg}
         
         return {
